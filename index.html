@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formulário de Precificação</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Formulário de Precificação</h1>
+
+    <form id="sample-form" autocomplete="off">
+      <label for="choice">Selecione o cargo:</label>
+      <select id="choice" name="choice">
+        <option value="">-- selecione --</option>
+        <option value="opcao1">Auxiliar de Apoio ao Educando</option>
+        <option value="opcao2">Cantineiro</option>
+        <option value="opcao3">Mecanografo</option>
+        <option value="opcao4">Oficial de manutenção</option>
+        <option value="opcao5">Porteiro Escolar</option>
+        <option value="opcao6">Servente Escolar</option>
+      </select>
+
+      <label for="multisearch">Selecione a linha a ser alterada:</label>
+      <div class="multisearch" id="multisearch" aria-haspopup="listbox">
+        <ul class="selected-list" id="selected-list" aria-live="polite"></ul>
+        <input id="multisearch-input" type="text" placeholder="Digitar para procurar..." aria-autocomplete="list" aria-controls="multisearch-list" />
+        <ul class="suggestions" id="multisearch-list" role="listbox"></ul>
+      </div>
+
+      <label for="school">Escola:</label>
+      <input id="school" name="school" list="schools-list" placeholder="Escolha ou digite a escola" />
+      <datalist id="schools-list"></datalist>
+
+      <label for="text">Texto:</label>
+      <textarea id="text" name="text" rows="4" placeholder="Escreva aqui..."></textarea>
+
+      <button type="submit">Enviar</button>
+    </form>
+
+    <section aria-live="polite" id="result" class="result"></section>
+  </main>
+
+  <div class="controls" style="max-width:720px;margin:16px auto;">
+    <button id="export-xlsx" type="button">Exportar respostas para Excel (.xlsx)</button>
+    <button id="clear-responses" type="button" style="margin-left:8px;background:#e53e3e">Limpar respostas</button>
+    <span id="responses-count" style="margin-left:12px;color:#334155"></span>
+  </div>
+
+  <!-- SheetJS para exportar .xlsx (fallback cria CSV se não disponível) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="assets/script.js"></script>
+</body>
+</html>
