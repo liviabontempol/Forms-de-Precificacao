@@ -20,24 +20,39 @@
         <option value="opcao4">Oficial de manutenção</option>
         <option value="opcao5">Porteiro Escolar</option>
         <option value="opcao6">Servente Escolar</option>
+        <option value="__create__">Criar Novo Cargo</option>
       </select>
 
-      <label for="multisearch">Selecione a linha a ser alterada:</label>
+  <label for="multisearch" id="multisearch-label">Selecione a linha a ser alterada:</label>
       <div class="multisearch" id="multisearch" aria-haspopup="listbox">
         <ul class="selected-list" id="selected-list" aria-live="polite"></ul>
         <input id="multisearch-input" type="text" placeholder="Digitar para procurar..." aria-autocomplete="list" aria-controls="multisearch-list" />
         <ul class="suggestions" id="multisearch-list" role="listbox"></ul>
       </div>
 
-      <label for="school">Escola:</label>
-      <input id="school" name="school" list="schools-list" placeholder="Escolha ou digite a escola" />
-      <datalist id="schools-list"></datalist>
-
-      <label for="text">Texto:</label>
-      <textarea id="text" name="text" rows="4" placeholder="Escreva aqui..."></textarea>
-
       <button type="submit">Enviar</button>
     </form>
+
+    <!-- layout inline para criar novo cargo (oculto por padrão) -->
+    <div id="create-cargo-inline" class="create-cargo hidden">
+      <h2>Criar Novo Cargo</h2>
+      <label for="new-name">Nome do cargo</label>
+      <input id="new-name" type="text" placeholder="Nome do cargo" />
+
+      <label for="new-desc">Descrição</label>
+      <textarea id="new-desc" rows="3" placeholder="Descrição do cargo (opcional)"></textarea>
+
+      <label for="new-hours">Carga horária (h/semana)</label>
+      <input id="new-hours" type="number" min="0" placeholder="40" />
+
+      <label for="new-salary">Salário (R$)</label>
+      <input id="new-salary" type="text" placeholder="0,00" />
+
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button id="save-new-cargo" type="button">Salvar cargo</button>
+        <button id="cancel-new-cargo" type="button" style="background:#e53e3e">Cancelar</button>
+      </div>
+    </div>
 
     <section aria-live="polite" id="result" class="result"></section>
   </main>
