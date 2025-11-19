@@ -9,7 +9,7 @@
     const app = express();
     app.use(cors());
     app.use(express.json());
-    //app.use(helmelt());
+    //app.use(helmelt()); deixar aqui caso suba p web
     //app.use(bodyParser.json());   
     //app.use(express.static("public"));  serve o front, ver se faz sentido ter essa linha
 
@@ -41,3 +41,6 @@
         
     const PORT = 3000;
     app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+
+    print(gerarPlanilha());
+    
