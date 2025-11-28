@@ -11,42 +11,75 @@
     <h1>Formulário de Precificação</h1>
 
     <form id="sample-form" autocomplete="off">
-      <label for="choice">Selecione o cargo:</label>
-      <select id="choice" name="choice">
-        <option value="">-- selecione --</option>
-        <option value="opcao1">Auxiliar de Apoio ao Educando</option>
-        <option value="opcao2">Cantineiro</option>
-        <option value="opcao3">Mecanografo</option>
-        <option value="opcao4">Oficial de manutenção</option>
-        <option value="opcao5">Porteiro Escolar</option>
-        <option value="opcao6">Servente Escolar</option>
-        <option value="__create__">Criar Novo Cargo</option>
-      </select>
+      <h2>Novos Cargos</h2>
+      <label for="new-name">Nome do cargo</label>
+      <input id="new-name" name="name" type="text" placeholder="Nome do cargo" required />
 
-  <label for="multisearch" id="multisearch-label">Selecione a linha a ser alterada:</label>
-      <div class="multisearch" id="multisearch" aria-haspopup="listbox">
-        <ul class="selected-list" id="selected-list" aria-live="polite"></ul>
-        <input id="multisearch-input" type="text" placeholder="Digitar para procurar..." aria-autocomplete="list" aria-controls="multisearch-list" />
-        <ul class="suggestions" id="multisearch-list" role="listbox"></ul>
+      <!-- Substituído: pergunta sobre Periculosidade e Insalubridade -->
+      <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Periculosidade</legend>
+        <label><input type="radio" name="periculosidade" id="periculosidade-sim" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="periculosidade" id="periculosidade-nao" value="nao" checked> Não</label>
+      </fieldset>
+
+      <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Insalubridade</legend>
+        <label><input type="radio" name="insalubridade" id="insalubridade-sim" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="insalubridade" id="insalubridade-nao" value="nao" checked> Não</label>
+
+        <div id="insalubridade-options" style="margin-top:8px;display:none;">
+          <label for="insalubridade-percent">Percentual de Insalubridade</label>
+          <select id="insalubridade-percent">
+            <option value="20">20%</option>
+            <option value="40">40%</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <label for="new-hours">Carga horária (h/semana)</label>
+      <input id="new-hours" name="hours" type="number" min="0" placeholder="40" />
+
+      <label for="new-salary">Salário (R$)</label>
+      <input id="new-salary" name="salary" type="text" placeholder="0,00" value="R$0,00" />
+
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button type="submit">Salvar cargo</button>
+        <button id="cancel-new-cargo" type="button" style="background:#e53e3e">Cancelar</button>
       </div>
-
-      <button type="submit">Enviar</button>
     </form>
 
     <!-- layout inline para criar novo cargo (oculto por padrão) -->
     <div id="create-cargo-inline" class="create-cargo hidden">
       <h2>Criar Novo Cargo</h2>
-      <label for="new-name">Nome do cargo</label>
-      <input id="new-name" type="text" placeholder="Nome do cargo" />
+      <label for="new-name-inline">Nome do cargo</label>
+      <input id="new-name-inline" type="text" placeholder="Nome do cargo" />
 
-      <label for="new-desc">Descrição</label>
-      <textarea id="new-desc" rows="3" placeholder="Descrição do cargo (opcional)"></textarea>
+      <!-- Substituído: pergunta sobre Periculosidade e Insalubridade -->
+      <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Periculosidade</legend>
+        <label><input type="radio" name="periculosidade" id="periculosidade-sim-inline" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="periculosidade" id="periculosidade-nao-inline" value="nao" checked> Não</label>
+      </fieldset>
 
-      <label for="new-hours">Carga horária (h/semana)</label>
-      <input id="new-hours" type="number" min="0" placeholder="40" />
+      <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Insalubridade</legend>
+        <label><input type="radio" name="insalubridade" id="insalubridade-sim-inline" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="insalubridade" id="insalubridade-nao-inline" value="nao" checked> Não</label>
 
-      <label for="new-salary">Salário (R$)</label>
-      <input id="new-salary" type="text" placeholder="0,00" />
+        <div id="insalubridade-options-inline" style="margin-top:8px;display:none;">
+          <label for="insalubridade-percent-inline">Percentual de Insalubridade</label>
+          <select id="insalubridade-percent-inline">
+            <option value="20">20%</option>
+            <option value="40">40%</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <label for="new-hours-inline">Carga horária (h/semana)</label>
+      <input id="new-hours-inline" type="number" min="0" placeholder="40" />
+
+      <label for="new-salary-inline">Salário-Base (R$)</label>
+      <input id="new-salary-inline" type="text" placeholder="0,00" value="R$0,00" />
 
       <div style="margin-top:10px;display:flex;gap:8px;">
         <button id="save-new-cargo" type="button">Salvar cargo</button>
