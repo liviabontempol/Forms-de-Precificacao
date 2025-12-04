@@ -10,17 +10,51 @@ export async function gerarPlanilha(dados) {
   // normaliza / defaults
   const quantidade = Number(dados.quantidade ?? 1);
   const salarioBase = Number(dados.salarioBase ?? 0);
-  const encargosPercent = Number(dados.encargosPercent ?? 0.30); // 30% padrão
+  // Encargos percentuais: valores fixos (não são fornecidos pelo usuário)
+  // Social charges are fixed and come from the contract/business rules.
+  const encargosPercentuais = {
+    inss: 0.20,
+    sesi: 0.015,
+    senai: 0.01,
+    incra: 0.002,
+    salarioEducacao: 0.025,
+    fgts: 0.08,
+    rat: 0.0246,
+    sebrae: 0.06,
+    salario13: 0.0909,
+    ferias: 0.0909,
+    adicionalFerias: 0.0303,
+    abonoPecuario: 0,
+    incidenciaM1sobre13eFerias: 0.0769,
+    afastamentoMaternidade: 0.00003,
+    incidenciaM1sobreAfastMaternidade: 0.0001,
+    // avisos prévios e incidências relacionadas (valores fornecidos)
+    avisoPrevioIndenizado: 0.0327,
+    incidenciaFgtsAvisoPrevioIndenizado: 0.002616,
+    multaFgtsAvisoPrevioIndenizado: 0.0002,
+    avisoPrevioTrabalhado: 0.0194,
+    incidenciaMod1AvisoPrevioTrabalhado: 0.007,
+    multaFgtsAvisoPrevioTrabalhado: 0.0001,
+    multaFgtsDemissaoSemJustaCausa: 0.015,
+    ausenciaPorDoenca: 0.0282,
+    licencaPaternidade: 0.0002,
+    ausenciasLegais: 0.011,
+    ausenciaPorAcidenteTrabalho: 0.0247,
+    incidenciaMod1CustoReposicao: 0.0233 
+  };
+  // soma das porcentagens (ex: 0.2 + 0.08 + ...)
+  const encargosPercent = Object.values(encargosPercentuais).reduce((s, v) => s + Number(v || 0), 0);
   const reservaTecnicaPercent = Number(dados.reservaTecnicaPercent ?? 0.08); // 8% padrão
-  const salarioMinimo = Number(dados.salarioMinimo ?? 0);
+  const salarioMinimo = Number(dados.salarioMinimo ?? 1518); //salario minimo 2025
+  let somaModulo1Unit = 0;
 
   const beneficios = dados.beneficios ?? {};
   const vt = Number(beneficios.vt ?? 0);
-  const vr = Number(beneficios.vr ?? 0);
-  const assistencia = Number(beneficios.assistencia ?? 0);
+  const va = Number(beneficios.vr ?? (beneficios.va ?? 0));
+  // Outros benefícios (unitário) — permitir `beneficios.outros` como número
   const outrosBenef = Number(beneficios.outros ?? 0);
 
-  // adicionais opcionais (já em valor unitário)
+  // adicionais opcionais (já em valor unitário) - depois fazer o calculo certo
   const adicionalNoturno = Number(dados.adicionalNoturno ?? 0);
   const horaIntervaloNoturno = Number(dados.horaIntervaloNoturno ?? 0);
   const horaFictaNoturna = Number(dados.horaFictaNoturna ?? 0);
@@ -45,35 +79,10 @@ export async function gerarPlanilha(dados) {
     }
   }
 
-  // Cálculos padrão (unidades)
-  const valor13 = salarioBase / 12; // 13º unitário
-  const valorFerias = (salarioBase / 12) * 1.33; // férias + 1/3 (fator 1,33 conforme você mencionou)
-  const fgts = salarioBase * 0.08; // FGTS 8%
-  const encargos = salarioBase * encargosPercent;
-
-  // Somatório de adicionais opcionais (unitário)
+  // Somatório de adicionais opcionais (unitário) 
   const adicionaisUnitarios = periculosidadeValor + insalubridadeValor + adicionalNoturno + horaIntervaloNoturno + horaFictaNoturna;
 
-  // Benefícios unitários (somatória)
-  const beneficiosUnitarios = vt + vr + assistencia + outrosBenef;
-
-  // Custos diretos unitários (mão de obra): salário + encargos + férias + 13º + FGTS + adicionais (simplificado)
-  const custosDiretosUnit = salarioBase + encargos + valorFerias + valor13 + fgts + adicionaisUnitarios;
-
-  // Totais por posto e geral
-  const totalPorPosto = custosDiretosUnit + beneficiosUnitarios; // simplificação: custos diretos + benefícios
-  const totalMensal = totalPorPosto * quantidade;
-  // Reserva técnica sobre custos diretos
-  const reservaTecnicaUnit = custosDiretosUnit * reservaTecnicaPercent;
-  const reservaTecnicaTotal = reservaTecnicaUnit * quantidade;
-
-  // Tributos (se informados como percentuais)
-  const tributos = dados.tributos ?? {};
-  const iss = Number(tributos.iss ?? 0);
-  const pisCofins = Number(tributos.pisCofins ?? 0);
-  const irpjCsll = Number(tributos.irpjCsll ?? 0);
-  const totalTributosUnit = (iss + pisCofins + irpjCsll) * totalPorPosto; // se vier em fração (ex: 0.02)
-
+ 
   // Cria pasta temp dentro do mesmo diretório do utils (server/src/temp)
   const tempDir = path.join(__dirname, "..", "temp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -86,82 +95,525 @@ export async function gerarPlanilha(dados) {
 
   // --- Módulo 1 - Composição da Remuneração ---
   sheet.addRow(["ANEXO I - PLANILHA DE CUSTOS E FORMAÇÃO DE PREÇOS"]).font = { bold: true };
-  sheet.addRow([]);
-  sheet.addRow([`Posto de Trabalho: ${dados.cargo ?? ""} (${dados.jornada ?? ""})`]);
-  sheet.addRow([]);
+  sheet.addRow([`Posto de Trabalho: ${dados.cargo ?? ""} (${dados.jornada ? dados.jornada + 'h/semana' : ""})`]);
 
   sheet.addRow(["MÓDULO 1 - Composição da Remuneração"]).font = headerStyle;
-  sheet.addRow(["Composição", "Quantidade", "Valor Unitário (R$)", "Valor Total (R$)"]);
+  sheet.addRow(["Composição da Remuneração", "Quantidade", "Valor Unitário (R$)", "Valor Total (R$)"]);
 
   // Salário base linha
   sheet.addRow(["Salário-Base", quantidade, salarioBase, salarioBase * quantidade]);
 
   // Periculosidade (opcional - amarelo editável)
   if (periculosidadeValor > 0) {
-    sheet.addRow(["Adicional de Periculosidade (30% do salário base)", quantidade, periculosidadeValor, periculosidadeValor * quantidade]);
+    sheet.addRow(["Adicional de Periculosidade (30% do salário base)", "", periculosidadeValor, ""]);
   } else {
-    sheet.addRow(["Adicional de Periculosidade (30% do salário base) - (não aplicado)", quantidade, 0, 0]);
+    sheet.addRow(["Adicional de Periculosidade (30% do salário base) - (não aplicado)", "", 0, 0]);
   }
 
   // Insalubridade (opcional)
   if (insalubridadeValor > 0) {
-    sheet.addRow([`Adicional de Insalubridade (aplicado sobre salário mínimo)`, quantidade, insalubridadeValor, insalubridadeValor * quantidade]);
+    sheet.addRow([`Adicional de Insalubridade (aplicado sobre salário mínimo)`, "", insalubridadeValor, ""]);
   } else {
-    sheet.addRow([`Adicional de Insalubridade - (não aplicado)`, quantidade, 0, 0]);
+    sheet.addRow([`Adicional de Insalubridade - (não aplicado)`, "", 0, 0]);
   }
 
   // Adicional Noturno e Horas (opcionais)
-  sheet.addRow(["Adicional Noturno + DSR", quantidade, adicionalNoturno, adicionalNoturno * quantidade]);
-  sheet.addRow(["Hora de Intervalo Noturno + DSR", quantidade, horaIntervaloNoturno, horaIntervaloNoturno * quantidade]);
-  sheet.addRow(["Hora Ficta Noturna + DSR", quantidade, horaFictaNoturna, horaFictaNoturna * quantidade]);
+  sheet.addRow(["Adicional Noturno + DSR", "", adicionalNoturno, ""]);
+  sheet.addRow(["Hora de Intervalo Noturno + DSR", "", horaIntervaloNoturno, ""]);
+  sheet.addRow(["Hora Ficta Noturna + DSR", "", horaFictaNoturna, ""]);
 
   // Total módulo 1 (simplificado)
-  sheet.addRow([]);
-  sheet.addRow(["Total Módulo 1 (Custos Diretos - unitário)", "", custosDiretosUnit.toFixed(2), (custosDiretosUnit * quantidade).toFixed(2)]);
+  // Soma apenas das linhas exibidas no Módulo 1 (salário + adicionais mostrados)
+  somaModulo1Unit = salarioBase + adicionaisUnitarios;
+
+  // calcular os itens do Módulo 2 com base no salario final.
+  const valor13 = somaModulo1Unit / 12; // 13º unitário
+  const valorFerias = (somaModulo1Unit / 12) * 1.33; // férias + 1/3
+  const fgts = somaModulo1Unit * 0.08; // FGTS 8%
+  const encargos = somaModulo1Unit * encargosPercent;
+
+  // Calcular benefícios unitários agora que somaModulo1Unit existe (usar somente inputs)
+  // vtUnit = (3 * vt) - (0.06 * somaModulo1Unit)
+  // vrUnit = (va * 22) - (0.20 * va)
+  // Se vt/va não forem informados, tratar como 0 (sem default fixo).
+  const vtUnit = (Number.isFinite(vt) && vt > 0) ? ((3 * vt * 22) - (0.06 * somaModulo1Unit)) : 0;
+  const vrUnit = (Number.isFinite(va) && va > 0) ? ((va * 22 * quantidade) - (0.20 * va)) : 0;
+  const beneficiosDiarios = vtUnit + vrUnit;
+
+  // Agora que temos os valores unitários do Módulo 2, calculamos custos diretos,
+  // totais por posto, reserva técnica e tributos.
+  const custosDiretosUnit = somaModulo1Unit + encargos + valorFerias + valor13 + fgts;
+  const totalPorPosto = custosDiretosUnit + beneficiosDiarios; // simplificação: custos diretos + benefícios
+  const totalMensal = totalPorPosto * quantidade;
+  // Reserva técnica sobre custos diretos
+  const reservaTecnicaUnit = custosDiretosUnit * reservaTecnicaPercent;
+  const reservaTecnicaTotal = reservaTecnicaUnit * quantidade;
+
+  // Tributos (se informados como percentuais)
+  const tributos = dados.tributos ?? {};
+  const iss = Number(tributos.iss ?? 0);
+  const pisCofins = Number(tributos.pisCofins ?? 0);
+  const irpjCsll = Number(tributos.irpjCsll ?? 0);
+  const totalTributosUnit = (iss + pisCofins + irpjCsll) * totalPorPosto; // se vier em fração (ex: 0.02)
+
+  sheet.addRow(["Total Módulo 1", "", somaModulo1Unit, (somaModulo1Unit * quantidade)]);
 
   // --- Módulo 2 - Encargos e Benefícios ---
   sheet.addRow([]);
   sheet.addRow(["MÓDULO 2 - Encargos e Benefícios Anuais, Mensais e Diários"]).font = headerStyle;
 
-  // 13º, Férias, FGTS, Encargos Previdenciários
-  sheet.addRow(["Item", "Percentual (se aplicável)", "Valor Unitário (R$)", "Valor Total (R$)"]);
-  sheet.addRow(["13º salário (unitário)", `${(valor13 / salarioBase * 100 || 0).toFixed(2)}%`, valor13.toFixed(2), (valor13 * quantidade).toFixed(2)]);
-  sheet.addRow(["Férias + 1/3 (unitário)", "", valorFerias.toFixed(2), (valorFerias * quantidade).toFixed(2)]);
-  sheet.addRow(["FGTS (8%)", "8%", fgts.toFixed(2), (fgts * quantidade).toFixed(2)]);
-  sheet.addRow(["Encargos (ex.: INSS, etc.)", `${(encargosPercent * 100).toFixed(2)}%`, encargos.toFixed(2), (encargos * quantidade).toFixed(2)]);
+  // Submódulo 2.1 - 13º (décimo terceiro) Salário, Férias e Adicional de Férias
+  sheet.addRow(["Submódulo 2.1 - 13º (décimo terceiro) Salário, Férias e Adicional de Férias"]).font = headerStyle;
+
+  // cabeçalho de tabela para o submódulo
+  sheet.addRow(["2.1", "13º (décimo terceiro) Salário, Férias e Adicional de Férias", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]).font = { bold: true };
+
+  // A: 13º salário
+  const pctA = somaModulo1Unit ? (valor13 / somaModulo1Unit) : 0;
+  const valA = valor13;
+  const totA = valA * quantidade;
+  sheet.addRow(["A", "13º (décimo terceiro) Salário", `${(pctA * 100).toFixed(2)}%`, valA, totA]);
+
+  // B: Férias e adicional de férias
+  const pctB = somaModulo1Unit ? (valorFerias / somaModulo1Unit) : 0;
+  const valB = valorFerias;
+  const totB = valB * quantidade;
+  sheet.addRow(["B", "Férias e Adicional de Férias", `${(pctB * 100).toFixed(2)}%`, valB, totB]);
+
+  // C: Incidência do módulo 2.2 sobre A e B (usar configuração se disponível)
+  const pctC = Number(encargosPercentuais.incidenciaM1sobre13eFerias || 0);
+  const valC = somaModulo1Unit * pctC;
+  const totC = valC * quantidade;
+  sheet.addRow(["C", "Incidência do módulo 2.2 sobre os itens A e B", `${(pctC * 100).toFixed(2)}%`, valC, totC]);
+
+  // D: Abono Pecuniário
+  const pctD = Number(encargosPercentuais.abonoPecuario || 0);
+  const valD = somaModulo1Unit * pctD;
+  const totD = valD * quantidade;
+  sheet.addRow(["D", "Abono Pecuniário", `${(pctD * 100).toFixed(2)}%`, valD, totD]);
+
+  // Total do Submódulo 2.1
+  const pctTotal21 = pctA + pctB + pctC + pctD;
+  const valTotal21 = valA + valB + valC + valD;
+  const totTotal21 = totA + totB + totC + totD;
+  sheet.addRow(["Total", "", `${(pctTotal21 * 100).toFixed(2)}%`, valTotal21, totTotal21]);
+  // Detalhar encargos individuais usando `encargosPercentuais`
+  sheet.addRow(["Encargos (detalhamento)", "Percentual", "Valor Unitário (R$)", "Valor Total (R$)"]);
+  Object.entries(encargosPercentuais).forEach(([nome, pct]) => {
+    const pctNum = Number(pct || 0);
+    const valor = somaModulo1Unit * pctNum;
+    sheet.addRow([`Encargo: ${nome.toUpperCase()}`, `${(pctNum * 100).toFixed(2)}%`, valor, (valor * quantidade)]);
+  });
+  // linha resumida de encargos (soma)
+  sheet.addRow(["Encargos (total)", `${Number(encargosPercent * 100).toFixed(2)}%`, encargos, (encargos * quantidade)]);
   sheet.addRow([]);
 
-  // Benefícios (se houver)
-  sheet.addRow(["BENEFÍCIOS"]);
-  sheet.addRow(["Vale-transporte (unit)", vt.toFixed(2), "", (vt * quantidade).toFixed(2)]);
-  sheet.addRow(["Vale-refeição/alimentação (unit)", vr.toFixed(2), "", (vr * quantidade).toFixed(2)]);
-  sheet.addRow(["Assistência médica/odontológica (unit)", assistencia.toFixed(2), "", (assistencia * quantidade).toFixed(2)]);
-  sheet.addRow(["Outros benefícios (unit)", outrosBenef.toFixed(2), "", (outrosBenef * quantidade).toFixed(2)]);
-  sheet.addRow(["Total Benefícios (unit)", "", beneficiosUnitarios.toFixed(2), (beneficiosUnitarios * quantidade).toFixed(2)]);
+  // Submódulo 2.2 - Encargos Previdenciários (GPS), FGTS e outras contribuições
+  sheet.addRow(["Submódulo 2.2 - Encargos Previdenciários (GPS), Fundo de Garantia por Tempo de Serviço (FGTS) e outras contribuições"]).font = headerStyle;
+  sheet.addRow(["2.2", "GPS, FGTS e outras contribuições", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]).font = { bold: true };
+
+  // A: INSS
+  const pctA2 = Number(encargosPercentuais.inss || 0);
+  const valA2 = somaModulo1Unit * pctA2;
+  const totA2 = valA2 * quantidade;
+  sheet.addRow(["A", "INSS", `${(pctA2 * 100).toFixed(2)}%`, valA2, totA2]);
+
+  // B: Salário Educação
+  const pctB2 = Number(encargosPercentuais.salarioEducacao || 0);
+  const valB2 = somaModulo1Unit * pctB2;
+  const totB2 = valB2 * quantidade;
+  sheet.addRow(["B", "Salário Educação", `${(pctB2 * 100).toFixed(2)}%`, valB2, totB2]);
+
+  // C: SAT / RAT
+  const pctC2 = Number(encargosPercentuais.rat || 0);
+  const valC2 = somaModulo1Unit * pctC2;
+  const totC2 = valC2 * quantidade;
+  sheet.addRow(["C", "SAT (RAT)", `${(pctC2 * 100).toFixed(2)}%`, valC2, totC2]);
+
+  // D: SESC/SESI
+  const pctD2 = Number(encargosPercentuais.sesi || 0);
+  const valD2 = somaModulo1Unit * pctD2;
+  const totD2 = valD2 * quantidade;
+  sheet.addRow(["D", "SESC/SESI", `${(pctD2 * 100).toFixed(2)}%`, valD2, totD2]);
+
+  // E: SENAI/SENAC
+  const pctE2 = Number(encargosPercentuais.senai || 0);
+  const valE2 = somaModulo1Unit * pctE2;
+  const totE2 = valE2 * quantidade;
+  sheet.addRow(["E", "SENAI / SENAC", `${(pctE2 * 100).toFixed(2)}%`, valE2, totE2]);
+
+  // F: SEBRAE
+  const pctF2 = Number(encargosPercentuais.sebrae || 0);
+  const valF2 = somaModulo1Unit * pctF2;
+  const totF2 = valF2 * quantidade;
+  sheet.addRow(["F", "SEBRAE", `${(pctF2 * 100).toFixed(2)}%`, valF2, totF2]);
+
+  // G: INCRA
+  const pctG2 = Number(encargosPercentuais.incra || 0);
+  const valG2 = somaModulo1Unit * pctG2;
+  const totG2 = valG2 * quantidade;
+  sheet.addRow(["G", "INCRA", `${(pctG2 * 100).toFixed(2)}%`, valG2, totG2]);
+
+  // H: FGTS
+  const pctH2 = Number(encargosPercentuais.fgts || 0);
+  const valH2 = somaModulo1Unit * pctH2;
+  const totH2 = valH2 * quantidade;
+  sheet.addRow(["H", "FGTS", `${(pctH2 * 100).toFixed(2)}%`, valH2, totH2]);
+
+  // Total Submódulo 2.2
+  const pctTotal22 = pctA2 + pctB2 + pctC2 + pctD2 + pctE2 + pctF2 + pctG2 + pctH2;
+  const valTotal22 = valA2 + valB2 + valC2 + valD2 + valE2 + valF2 + valG2 + valH2;
+  const totTotal22 = totA2 + totB2 + totC2 + totD2 + totE2 + totF2 + totG2 + totH2;
+  sheet.addRow(["Total", "", `${(pctTotal22 * 100).toFixed(2)}%`, valTotal22, totTotal22]);
+  sheet.addRow([]);
+
+  // Submódulo 2.3 - Benefícios Mensais e Diários
+  sheet.addRow(["Submódulo 2.3 - Benefícios Mensais e Diários"]).font = headerStyle;
+  sheet.addRow(["2.3", "Benefícios Mensais e Diários", "Quantidade", "Valor Unitário (R$)", "Valor Total (R$)"]).font = { bold: true };
+
+  // calcular valores unitários mensais conforme modelo
+  const vtMonthlyUnit = (Number.isFinite(vt) && vt > 0) ? ((3 * vt * 22) - (0.06 * somaModulo1Unit)) : 0;
+  const vrMonthlyUnit = (Number.isFinite(va) && va > 0) ? ((va * 22) - (0.20 * va * 22)) : 0; // 20% sobre o total do VA mensal
+
+  // A: Transporte
+  const rowA = sheet.addRow(["A", "Transporte (3 x R$ " + (vt || 0).toFixed(2) + " x 22 dias x quant.empregados - 6% sal)", quantidade, vtMonthlyUnit, (vtMonthlyUnit * quantidade)]);
+  rowA.getCell(3).numFmt = '#,##0';
+  rowA.getCell(4).numFmt = '#,##0.00';
+  rowA.getCell(5).numFmt = '#,##0.00';
+
+  // B: Auxílio-Refeição/Alimentação
+  const rowB = sheet.addRow(["B", "Auxílio-Refeição/Alimentação (1 x R$ " + (va || 0).toFixed(2) + " x 22 x quant.empregados - 20% VA)", quantidade, vrMonthlyUnit, (vrMonthlyUnit * quantidade)]);
+  rowB.getCell(3).numFmt = '#,##0';
+  rowB.getCell(4).numFmt = '#,##0.00';
+  rowB.getCell(5).numFmt = '#,##0.00';
+
+  // C: Outros (especificar) - usar `outrosBenef` se houver, caso contrário tentar `beneficios.outros` ou 0
+  const outrosUnit = (typeof outrosBenef !== 'undefined' && Number.isFinite(outrosBenef)) ? outrosBenef : Number(beneficios.outros ?? 0);
+  const rowC = sheet.addRow(["C", "Outros (especificar)", quantidade, outrosUnit, (outrosUnit * quantidade)]);
+  rowC.getCell(3).numFmt = '#,##0';
+  rowC.getCell(4).numFmt = '#,##0.00';
+  rowC.getCell(5).numFmt = '#,##0.00';
+
+  // Total Submódulo 2.3
+  const totalValUnit23 = vtMonthlyUnit + vrMonthlyUnit + outrosUnit;
+  const totalValTotal23 = (vtMonthlyUnit * quantidade) + (vrMonthlyUnit * quantidade) + (outrosUnit * quantidade);
+  const rowTotal23 = sheet.addRow(["Total", "", "", totalValUnit23, totalValTotal23]);
+  rowTotal23.getCell(4).numFmt = '#,##0.00';
+  rowTotal23.getCell(5).numFmt = '#,##0.00';
+  
+  // --- Quadro-Resumo do Módulo 2 - Encargos e Benefícios ---
+  // calcular percentual do submódulo 2.3 em relação ao somaModulo1Unit
+  const pct23 = somaModulo1Unit ? (totalValUnit23 / somaModulo1Unit) : 0;
+  const pctTotalModule2 = pctTotal21 + pctTotal22 + pct23;
+  const valModule2UnitTotal = valTotal21 + valTotal22 + totalValUnit23;
+  const valModule2Total = totTotal21 + totTotal22 + totalValTotal23;
+
+  sheet.addRow([]);
+  sheet.addRow(["Quadro-Resumo do Módulo 2 - Encargos e Benefícios anuais, mensais e diários"]).font = headerStyle;
+  sheet.addRow(["2", "Encargos e Benefícios Anuais, Mensais e Diários", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]).font = { bold: true };
+  const r21 = sheet.addRow(["2.1", "13º (décimo terceiro) Salário, Férias e Adicional de Férias", `${(pctTotal21 * 100).toFixed(2)}%`, valTotal21, totTotal21]);
+  const r22 = sheet.addRow(["2.2", "GPS, FGTS e outras contribuições", `${(pctTotal22 * 100).toFixed(2)}%`, valTotal22, totTotal22]);
+  const r23 = sheet.addRow(["2.3", "Benefícios Mensais e Diários", `${(pct23 * 100).toFixed(2)}%`, totalValUnit23, totalValTotal23]);
+  const rTot = sheet.addRow(["Total", "", `${(pctTotalModule2 * 100).toFixed(2)}%`, valModule2UnitTotal, valModule2Total]);
+  // aplicar formatação de moeda e percentuais nas células relevantes
+  [r21, r22, r23, rTot].forEach(r => {
+    // percentual na coluna 3
+    try { r.getCell(3).numFmt = '0.00%'; } catch(e){}
+    try { r.getCell(4).numFmt = '#,##0.00'; } catch(e){}
+    try { r.getCell(5).numFmt = '#,##0.00'; } catch(e){}
+  });
+
+  // Reserva Técnica
+  // Módulo 3 - Provisão para Rescisão
+  sheet.addRow([]);
+  sheet.addRow(["MÓDULO 3 - Provisão para Rescisão"]).font = headerStyle;
+  sheet.addRow(["3", "Provisão para Rescisão", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]).font = { bold: true };
+
+  // A: Aviso Prévio Indenizado
+  const pctA3 = 0.0651; // 6.5100%
+  const valA3 = somaModulo1Unit * pctA3;
+  const totA3 = valA3 * quantidade;
+  sheet.addRow(["A", "Aviso Prévio Indenizado", `${(pctA3 * 100).toFixed(4)}%`, valA3, totA3]);
+
+  // B: Incidência do FGTS sobre o Aviso Prévio Indenizado
+  const pctB3 = 0.00430; // 0.430%
+  const valB3 = somaModulo1Unit * pctB3;
+  const totB3 = valB3 * quantidade;
+  sheet.addRow(["B", "Incidência do FGTS sobre o Aviso Prévio Indenizado", `${(pctB3 * 100).toFixed(4)}%`, valB3, totB3]);
+
+  // C: Multa do FGTS e contribuição social sobre o Aviso Prévio Indenizado
+  const pctC3 = 0.03900; // 3.9000%
+  const valC3 = somaModulo1Unit * pctC3;
+  const totC3 = valC3 * quantidade;
+  sheet.addRow(["C", "Multa do FGTS e contribuição social sobre o Aviso Prévio Indenizado", `${(pctC3 * 100).toFixed(4)}%`, valC3, totC3]);
+
+  // D: Aviso Prévio Trabalhado (0%)
+  const pctD3 = 0;
+  sheet.addRow(["D", "Aviso Prévio Trabalhado", `${(pctD3 * 100).toFixed(4)}%`, "-", "-"]);
+
+  // E: Incidência dos encargos do submódulo 2.2 sobre o Aviso Prévio Trabalhado (0%)
+  const pctE3 = 0;
+  sheet.addRow(["E", "Incidência dos encargos do submódulo 2.2 sobre o Aviso Prévio Trabalhado", `${(pctE3 * 100).toFixed(4)}%`, "-", "-"]);
+
+  // F: Multa do FGTS e contribuição social sobre o Aviso Prévio Trabalhado (0%)
+  const pctF3 = 0;
+  sheet.addRow(["F", "Multa do FGTS e contribuição social sobre o Aviso Prévio Trabalhado", `${(pctF3 * 100).toFixed(4)}%`, "-", "-"]);
+
+  // G: Outros (indenização adicional)
+  const pctG3 = 0.00730; // 0.7300%
+  const valG3 = somaModulo1Unit * pctG3;
+  const totG3 = valG3 * quantidade;
+  sheet.addRow(["G", "Outros (indenização adicional)", `${(pctG3 * 100).toFixed(4)}%`, valG3, totG3]);
+
+  // Total Módulo 3
+  const pctTotal3 = pctA3 + pctB3 + pctC3 + pctD3 + pctE3 + pctF3 + pctG3;
+  const valTotal3 = (valA3 || 0) + (valB3 || 0) + (valC3 || 0) + (valG3 || 0);
+  const totTotal3 = (totA3 || 0) + (totB3 || 0) + (totC3 || 0) + (totG3 || 0);
+  const rowTotal3 = sheet.addRow(["Total", "", `${(pctTotal3 * 100).toFixed(4)}%`, valTotal3, totTotal3]);
+  try { rowTotal3.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal3.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+  // --- MÓDULO 4 - Custo de Reposição do Profissional Ausente ---
+  sheet.addRow([]);
+  sheet.addRow(["MÓDULO 4 - Custo de Reposição do Profissional Ausente"]).font = headerStyle;
+  sheet.addRow(["4.1", "Ausências Legais", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]).font = { bold: true };
+
+  // A: Férias (0%)
+  const pctA4 = 0.0;
+  sheet.addRow(["A", "Férias", `${(pctA4 * 100).toFixed(4)}%`, "-", "-"]);
+
+  // B: Ausências Legais (3.260%)
+  const pctB4 = 0.03260;
+  const valB4 = somaModulo1Unit * pctB4;
+  const totB4 = valB4 * quantidade;
+  sheet.addRow(["B", "Ausências Legais", `${(pctB4 * 100).toFixed(4)}%`, valB4, totB4]);
+
+  // C: Licença-Paternidade (0.030%)
+  const pctC4 = 0.00030;
+  const valC4 = somaModulo1Unit * pctC4;
+  const totC4 = valC4 * quantidade;
+  sheet.addRow(["C", "Licença-Paternidade", `${(pctC4 * 100).toFixed(4)}%`, valC4, totC4]);
+
+  // D: Ausência por acidente de trabalho (0.040%)
+  const pctD4 = 0.00040;
+  const valD4 = somaModulo1Unit * pctD4;
+  const totD4 = valD4 * quantidade;
+  sheet.addRow(["D", "Ausência por acidente de trabalho", `${(pctD4 * 100).toFixed(4)}%`, valD4, totD4]);
+
+  // E: Afastamento Maternidade (0.010%)
+  const pctE4 = 0.00010;
+  const valE4 = somaModulo1Unit * pctE4;
+  const totE4 = valE4 * quantidade;
+  sheet.addRow(["E", "Afastamento Maternidade", `${(pctE4 * 100).toFixed(4)}%`, valE4, totE4]);
+
+  // F: Outros (0%)
+  const pctF4 = 0.0;
+  sheet.addRow(["F", "Outros (especificar)", `${(pctF4 * 100).toFixed(4)}%`, "-", "-"]);
+
+  // G: Incidência do Módulo 2.2 (1.25%)
+  const pctG4 = 0.0125;
+  const valG4 = somaModulo1Unit * pctG4;
+  const totG4 = valG4 * quantidade;
+  sheet.addRow(["G", "Incidência do Módulo 2.2", `${(pctG4 * 100).toFixed(4)}%`, valG4, totG4]);
+
+  // Total Módulo 4
+  const pctTotal4 = pctA4 + pctB4 + pctC4 + pctD4 + pctE4 + pctF4 + pctG4;
+  const valTotal4 = (valB4 || 0) + (valC4 || 0) + (valD4 || 0) + (valE4 || 0) + (valG4 || 0);
+  const totTotal4 = (totB4 || 0) + (totC4 || 0) + (totD4 || 0) + (totE4 || 0) + (totG4 || 0);
+  const rowTotal4 = sheet.addRow(["Total", "", `${(pctTotal4 * 100).toFixed(3)}%`, valTotal4, totTotal4]);
+  try { rowTotal4.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal4.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+
+  // --- MÓDULO 5 - Insumos Diversos ---
+  sheet.addRow([]);
+  sheet.addRow(["MÓDULO 5 - Insumos Diversos"]).font = headerStyle;
+  sheet.addRow(["5", "Insumos Diversos", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]).font = { bold: true };
+
+  // allow overrides via payload.dados.insumos
+  const insumos = (dados && dados.insumos) ? dados.insumos : {};
+  const uniformesUnit = Number(insumos.uniformesUnit) || 31.84;
+  const materiaisUnit = Number(insumos.materiaisUnit) || 0;
+  const epiUnit = Number(insumos.epiUnit) || 8.92;
+
+  // A: Uniformes
+  const valA5 = uniformesUnit;
+  const totA5 = valA5 * quantidade;
+  sheet.addRow(["A", "Uniformes", "-", valA5, totA5]);
+
+  // B: Materiais
+  const valB5 = materiaisUnit;
+  const totB5 = valB5 * quantidade;
+  if (valB5) sheet.addRow(["B", "Materiais", "-", valB5, totB5]);
+  else sheet.addRow(["B", "Materiais", "-", "-", "-"]);
+
+  // C: Equipamentos de Proteção Individual
+  const valC5 = epiUnit;
+  const totC5 = valC5 * quantidade;
+  sheet.addRow(["C", "Equipamentos de Proteção Individual", "-", valC5, totC5]);
+
+  // D: Reserva Técnica (1.00%)
+  const pctD5 = 0.01;
+  const valD5 = somaModulo1Unit * pctD5;
+  const totD5 = valD5 * quantidade;
+  sheet.addRow(["D", "Reserva Técnica", `${(pctD5 * 100).toFixed(2)}%`, valD5, totD5]);
+
+  // Total Módulo 5
+  const valTotal5 = (valA5 || 0) + (valB5 || 0) + (valC5 || 0) + (valD5 || 0);
+  const totTotal5 = (totA5 || 0) + (totB5 || 0) + (totC5 || 0) + (totD5 || 0);
+  const rowTotal5 = sheet.addRow(["Total", "", "", valTotal5, totTotal5]);
+  try { rowTotal5.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal5.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
 
   // Reserva Técnica
   sheet.addRow([]);
-  sheet.addRow(["Reserva Técnica", `${(reservaTecnicaPercent * 100).toFixed(2)}%`, reservaTecnicaUnit.toFixed(2), reservaTecnicaTotal.toFixed(2)]);
+  sheet.addRow(["Reserva Técnica", `${Number(reservaTecnicaPercent * 100).toFixed(2)}%`, reservaTecnicaUnit, reservaTecnicaTotal]);
+
+  // --- MÓDULO 6 - Custos Indiretos, Tributos e Lucro ---
+  sheet.addRow([]);
+  sheet.addRow(["MÓDULO 6 - Custos Indiretos, Tributos e Lucro"]).font = headerStyle;
+  sheet.addRow(["6", "Custos Indiretos, Tributos e Lucro", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]).font = { bold: true };
+
+  // A: Custos Indiretos (7%) applied on totalPorPosto
+  const pctA6 = 0.07;
+  const valA6 = totalPorPosto * pctA6;
+  const totA6 = valA6 * quantidade;
+  sheet.addRow(["A", "Custos Indiretos", `${(pctA6 * 100).toFixed(2)}%`, valA6, totA6]);
+
+  // B: Lucro (0% default)
+  const pctB6 = 0.0;
+  if (pctB6 > 0) {
+    const valB6 = totalPorPosto * pctB6;
+    const totB6 = valB6 * quantidade;
+    sheet.addRow(["B", "Lucro", `${(pctB6 * 100).toFixed(2)}%`, valB6, totB6]);
+  } else {
+    sheet.addRow(["B", "Lucro", `${(pctB6 * 100).toFixed(2)}%`, "-", "-"]);
+  }
+
+  // C: Tributos (16.62%) applied on totalPorPosto
+  const pctC6 = 0.1662;
+  const valC6 = totalPorPosto * pctC6;
+  const totC6 = valC6 * quantidade;
+  sheet.addRow(["C", "Tributos", `${(pctC6 * 100).toFixed(2)}%`, valC6, totC6]);
+
+  // C.1 - Tributo Federal (COFINS) 7.60%
+  const pctC1_6 = 0.076;
+  sheet.addRow(["C.1", "Tributo Federal (COFINS)", `${(pctC1_6 * 100).toFixed(2)}%`, "-", "-"]);
+  // C.2 - Tributo Federal (PIS) 1.65%
+  const pctC2_6 = 0.0165;
+  sheet.addRow(["C.2", "Tributo Federal (PIS)", `${(pctC2_6 * 100).toFixed(2)}%`, "-", "-"]);
+  // C.3 - Tributo Municipal (ISSQN) 5%
+  const pctC3_6 = 0.05;
+  sheet.addRow(["C.3", "Tributo Municipal (ISSQN)", `${(pctC3_6 * 100).toFixed(2)}%`, "-", "-"]);
+
+  // D: Tributos sobre Vale Alimentação (5.263%) — base on Módulo 2.3 unit value if available
+  const pctD6 = 0.05263;
+  const baseForD = (typeof totalValUnit23 !== 'undefined' && totalValUnit23) ? totalValUnit23 : totalPorPosto;
+  const valD6 = baseForD * pctD6;
+  const totD6 = valD6 * quantidade;
+  sheet.addRow(["D", "Tributos sobre Vale Alimentação", `${(pctD6 * 100).toFixed(3)}%`, valD6, totD6]);
+  // D.1 Tributos Municipais (especificar) 5%
+  const pctD1 = 0.05;
+  sheet.addRow(["D.1", "Tributos Municipais (especificar)", `${(pctD1 * 100).toFixed(2)}%`, "-", "-"]);
+
+  // Total Módulo 6
+  const valTotal6 = (valA6 || 0) + (valC6 || 0) + (valD6 || 0);
+  const totTotal6 = (totA6 || 0) + (totC6 || 0) + (totD6 || 0);
+  const rowTotal6 = sheet.addRow(["Total", "", "", valTotal6, totTotal6]);
+  try { rowTotal6.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal6.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+
+  // --- QUADRO-RESUMO DO CUSTO POR EMPREGADO ---
+  sheet.addRow([]);
+  sheet.addRow(["2. QUADRO-RESUMO DO CUSTO POR EMPREGADO"]).font = headerStyle;
+  sheet.addRow(["","Mão de obra vinculada à execução contratual (valor por empregado)", "", "Valor Unitário (R$)", "Valor Total (R$)" ]).font = { bold: true };
+
+  const unitA = somaModulo1Unit || 0;
+  const totalA = (somaModulo1Unit || 0) * quantidade;
+  const unitB = (typeof valModule2UnitTotal !== 'undefined') ? valModule2UnitTotal : 0;
+  const totalB = (typeof valModule2Total !== 'undefined') ? valModule2Total : 0;
+  const unitC = (typeof valTotal3 !== 'undefined') ? valTotal3 : 0;
+  const totalC = (typeof totTotal3 !== 'undefined') ? totTotal3 : 0;
+  const unitD = (typeof valTotal4 !== 'undefined') ? valTotal4 : 0;
+  const totalD = (typeof totTotal4 !== 'undefined') ? totTotal4 : 0;
+  const unitE = (typeof valTotal5 !== 'undefined') ? valTotal5 : 0;
+  const totalE = (typeof totTotal5 !== 'undefined') ? totTotal5 : 0;
+
+  const rA = sheet.addRow(["A", "Módulo 1 - Composição da Remuneração", "", unitA, totalA]);
+  const rB = sheet.addRow(["B", "Módulo 2 - Encargos e Benefícios Anuais, Mensais e Diários", "", unitB, totalB]);
+  const rC = sheet.addRow(["C", "Módulo 3 - Provisão para Rescisão", "", unitC, totalC]);
+  const rD = sheet.addRow(["D", "Módulo 4 - Custo de Reposição do Profissional Ausente", "", unitD, totalD]);
+  const rE = sheet.addRow(["E", "Módulo 5 - Insumos Diversos", "", unitE, totalE]);
+
+  const subtotalUnit = unitA + unitB + unitC + unitD + unitE;
+  const subtotalTotal = totalA + totalB + totalC + totalD + totalE;
+  const rSub = sheet.addRow(["Subtotal (A + B +C+ D+E)", "", "", subtotalUnit, subtotalTotal]);
+
+  const unitF = (typeof valTotal6 !== 'undefined') ? valTotal6 : 0;
+  const totalF = (typeof totTotal6 !== 'undefined') ? totTotal6 : 0;
+  const rF = sheet.addRow(["F", "Módulo 6 – Custos Indiretos, Tributos e Lucro", "", unitF, totalF]);
+
+  const valorUnitTotal = subtotalUnit + unitF;
+  const valorTotalTotal = subtotalTotal + totalF;
+  const rVal = sheet.addRow(["Valor Total", "", "", valorUnitTotal, valorTotalTotal]);
+  const rVal4 = sheet.addRow(["Valor Total (4 meses)", "", "", valorUnitTotal * 4, valorTotalTotal * 4]);
+
+  // formatamento moeda para essas linhas
+  [rA, rB, rC, rD, rE, rSub, rF, rVal, rVal4].forEach(r => {
+    try { r.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
+    try { r.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+  });
 
   // Tributos (se fornecidos)
   sheet.addRow([]);
   sheet.addRow(["TRIBUTOS (aplicados sobre total por posto se informados)"]);
-  sheet.addRow([`ISS (${(iss*100).toFixed(2)}%)`, "", (iss * totalPorPosto).toFixed(2), (iss * totalPorPosto * quantidade).toFixed(2)]);
-  sheet.addRow([`PIS/COFINS (${(pisCofins*100).toFixed(2)}%)`, "", (pisCofins * totalPorPosto).toFixed(2), (pisCofins * totalPorPosto * quantidade).toFixed(2)]);
-  sheet.addRow([`IRPJ/CSLL (${(irpjCsll*100).toFixed(2)}%)`, "", (irpjCsll * totalPorPosto).toFixed(2), (irpjCsll * totalPorPosto * quantidade).toFixed(2)]);
+  sheet.addRow([`ISS (${Number(iss * 100).toFixed(2)}%)`, "", (iss * totalPorPosto), (iss * totalPorPosto * quantidade)]);
+  sheet.addRow([`PIS/COFINS (${Number(pisCofins * 100).toFixed(2)}%)`, "", (pisCofins * totalPorPosto), (pisCofins * totalPorPosto * quantidade)]);
+  sheet.addRow([`IRPJ/CSLL (${Number(irpjCsll * 100).toFixed(2)}%)`, "", (irpjCsll * totalPorPosto), (irpjCsll * totalPorPosto * quantidade)]);
 
   // Totais finais simplificados
   sheet.addRow([]);
-  sheet.addRow(["TOTAL POR POSTO (custos diretos + benefícios + tributos unit)", "", totalPorPosto.toFixed(2), (totalPorPosto * quantidade).toFixed(2)]);
-  sheet.addRow(["TOTAL MENSAL (todos os postos)", "", "", totalMensal.toFixed(2)]);
+  sheet.addRow(["TOTAL POR POSTO (custos diretos + benefícios + tributos unit)", "", totalPorPosto, (totalPorPosto * quantidade)]);
+  sheet.addRow(["TOTAL MENSAL (todos os postos)", "", "", totalMensal]);
   sheet.addRow([]);
 
   // Ajustes de colunas para ficar legível
   sheet.columns.forEach(col => {
     col.width = 25;
-    if (!col.numFmt) col.numFmt = '#,##0.00';
+    if (!col.numFmt) col.numFmt = '#,##0.##';
   });
 
+  // Ensure integer counts show no decimals and monetary columns show up to 2 decimals
+  // Col 2 -> Quantidade (no decimals), Col 3 & 4 -> Valores (up to 2 decimals)
+  sheet.eachRow((row, rowNumber) => {
+    try {
+      const qtyCell = row.getCell(2);
+      if (qtyCell && typeof qtyCell.value === 'number') qtyCell.numFmt = '#,##0';
+      const unitCell = row.getCell(3);
+      if (unitCell && typeof unitCell.value === 'number') unitCell.numFmt = '#,##0.##';
+      const totalCell = row.getCell(4);
+      if (totalCell && typeof totalCell.value === 'number') totalCell.numFmt = '#,##0.##';
+
+      // If any cell was accidentally written as a string ending with a dot (e.g. "1234."),
+      // normalize it: remove trailing dot and convert to a numeric cell.
+      [qtyCell, unitCell, totalCell].forEach(cell => {
+        if (!cell) return;
+        if (typeof cell.value === 'string') {
+          const v = cell.value.trim();
+          // match digits followed by a single dot and nothing else
+          if (/^\d+\.$/.test(v)) {
+            const normalized = Number(v.slice(0, -1));
+            if (isFinite(normalized)) {
+              cell.value = normalized;
+              // apply appropriate format
+              if (cell === qtyCell) cell.numFmt = '#,##0';
+              else cell.numFmt = '#,##0.##';
+            }
+          }
+        }
+      });
+    } catch (e) {
+      // safe to ignore row formatting errors
+    }
+  });
   // Nome e salva arquivo em temp
   const nomeArquivo = `planilha_${Date.now()}.xlsx`;
   const caminhoArquivo = path.join(tempDir, nomeArquivo);

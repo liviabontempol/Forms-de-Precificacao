@@ -4,7 +4,10 @@
   const newName = () => document.getElementById('new-name');
   const newDesc = () => document.getElementById('new-desc');
   const newHours = () => document.getElementById('new-hours');
+  const newQuantidade = () => document.getElementById('new-quantidade');
   const newSalary = () => document.getElementById('new-salary');
+  const newVt = () => document.getElementById('new-vt');
+  const newVa = () => document.getElementById('new-va');
   const newPericulosidade = () => {
     const r = document.querySelector('input[name="periculosidade"]:checked');
     return r ? (r.value === 'sim') : false;
@@ -113,31 +116,56 @@
 
   attachCurrencyInput(salaryInput);
   attachCurrencyInput(salaryInputInline);
+  // attach to new benefit inputs
+  attachCurrencyInput(document.getElementById('new-vt'));
+  attachCurrencyInput(document.getElementById('new-va'));
+  attachCurrencyInput(document.getElementById('new-vt-inline'));
+  attachCurrencyInput(document.getElementById('new-va-inline'));
 
-  const STORAGE_KEY = 'form_responses_v1';
+  
 
-  function loadResponses(){
-    try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+  async function downloadPlanilha(payload) {
+  try {
+    const resp = await fetch('http://localhost:3000/gerar-planilha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text().catch(()=>null);
+      throw new Error(`Erro ${resp.status}: ${txt || resp.statusText}`);
+    }
+
+    // recebe o conteúdo como blob
+    const blob = await resp.blob();
+
+    // tenta extrair o filename do header Content-Disposition
+    const cd = resp.headers.get('Content-Disposition') || resp.headers.get('content-disposition') || '';
+    let filename = 'planilha.xlsx';
+    const match = /filename\\*?=(?:UTF-8'')?\"?([^\";\\n]+)/i.exec(cd);
+    if (match && match[1]) {
+      filename = decodeURIComponent(match[1].replace(/['"]/g,''));
+    }
+
+    // cria link para download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Erro ao gerar/baixar planilha:', err);
+      alert('Erro ao gerar a planilha: ' + (err.message || err));
+      throw err;
   }
+}
 
-  function saveResponse(obj){
-    const all = loadResponses();
-    all.push({ timestamp: new Date().toISOString(), ...obj });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-  }
 
-  function clearResponses(){
-    localStorage.removeItem(STORAGE_KEY);
-    renderResponsesCount();
-  }
-
-  function renderResponsesCount(){
-    const span = document.getElementById('responses-count');
-    const n = loadResponses().length;
-    span.textContent = n ? `${n} resposta(s) armazenada(s)` : 'Nenhuma resposta armazenada';
-  }
-
-  form.addEventListener('submit', (e)=>{
+  form.addEventListener('submit', async (e)=>{
     e.preventDefault();
     const nameEl = newName();
     const descEl = newDesc();
@@ -160,42 +188,54 @@
       // normaliza salário (permite vírgula)
       salary = parseBRLString(salaryRaw);
     }
-    const data = { name, periculosidade, insalubridade, insalubridadePct, hours: Number(hours) || hours, salary: Number(salary) || salary };
-    // mostra resumo
-    if(result) result.textContent = JSON.stringify(data, null, 2);
-    saveResponse(data);
-    renderResponsesCount();
+    // monta payload compatível com gerarPlanilha.js
+    const quantidadeEl = newQuantidade();
+    const quantidade = quantidadeEl ? Number(quantidadeEl.value) || 1 : 1;
+    // read benefits inputs (use dataset.cents if available)
+    const vtEl = newVt();
+    const vaEl = newVa();
+    let vtVal = 0;
+    let vaVal = 0;
+    if (vtEl && typeof vtEl.dataset.cents !== 'undefined') vtVal = Number(vtEl.dataset.cents)/100;
+    else if (vtEl) vtVal = parseBRLString(vtEl.value) || 0;
+    if (vaEl && typeof vaEl.dataset.cents !== 'undefined') vaVal = Number(vaEl.dataset.cents)/100;
+    else if (vaEl) vaVal = parseBRLString(vaEl.value) || 0;
+
+    const payload = {
+      cargo: name,
+      jornada: hours || '',
+      quantidade: quantidade,
+      salarioBase: Number(salary) || 0,
+      // defaults razoáveis; podem ser alterados no backend ou adicionados inputs no futuro
+      encargosPercent: 0.30,
+      reservaTecnicaPercent: 0.08,
+      salarioMinimo: Number(salary) || 0,
+      beneficios: { vt: vtVal, vr: vaVal, assistencia: 0, outros: 0 },
+      adicionalNoturno: 0,
+      horaIntervaloNoturno: 0,
+      horaFictaNoturna: 0,
+      periculosidade: periculosidade,
+      insalubridade: insalubridade ? String(insalubridadePct || 20) : false,
+      tributos: { iss: 0, pisCofins: 0, irpjCsll: 0 }
+    };
+
+    // gerar e baixar a planilha; se falhar, aborta sem salvar localmente
+    try {
+      await downloadPlanilha(payload);
+    } catch (err) {
+      return;
+    }
+    // mostra resumo (opcional)
+    if(result) result.textContent = JSON.stringify(payload, null, 2);
     // limpa formulário
     nameEl.value = ''; if(descEl) descEl.value = ''; if(hoursEl) hoursEl.value = '';
     if(salaryEl){ salaryEl.value = formatBRL(0); salaryEl.dataset.cents = '0'; }
+    const vtResetEl = newVt(); const vaResetEl = newVa();
+    if(vtResetEl){ vtResetEl.value = 'R$5,75'; vtResetEl.dataset.cents = String(Math.round(5.75*100)); }
+    if(vaResetEl){ vaResetEl.value = 'R$29,15'; vaResetEl.dataset.cents = String(Math.round(29.15*100)); }
   });
 
-  // Exporta para XLSX usando SheetJS se disponível, senão CSV
-  function exportResponses(){
-    const data = loadResponses();
-    if(!data.length){ alert('Não há respostas para exportar.'); return }
-    const table = data.map(r=>({ timestamp: r.timestamp, name: r.name, periculosidade: r.periculosidade ? 'Sim' : 'Não', insalubridade: r.insalubridade ? `Sim (${r.insalubridadePct || ''}%)` : 'Não', hours: r.hours || '', salary: r.salary || '' }));
-    if(window.XLSX){
-      const ws = XLSX.utils.json_to_sheet(table);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Cargos');
-      const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-      const blob = new Blob([wbout], {type:'application/octet-stream'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'cargos.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    } else {
-      const headers = Object.keys(table[0]);
-      const rows = [headers.join(',')].concat(table.map(r=>headers.map(h=>`"${String(r[h]||'').replace(/"/g,'""')}"`).join(',')));
-      const blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'cargos.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    }
-  }
-
-  const exportBtn = document.getElementById('export-xlsx');
-  const clearBtn = document.getElementById('clear-responses');
-  if(exportBtn) exportBtn.addEventListener('click', exportResponses);
-  if(clearBtn) clearBtn.addEventListener('click', ()=>{ if(confirm('Limpar todas as respostas armazenadas?')) clearResponses(); });
+  
 
   // cancelar: limpa campos do form
   const cancelBtn = document.getElementById('cancel-new-cargo');
@@ -218,6 +258,8 @@
       const opts = document.getElementById('insalubridade-options'); if(opts) opts.style.display = 'none';
       const optsInline = document.getElementById('insalubridade-options-inline'); if(optsInline) optsInline.style.display = 'none';
       const sInline = document.getElementById('new-salary-inline'); if(sInline){ sInline.value = formatBRL(0); sInline.dataset.cents = '0'; }
+      const vtInline = document.getElementById('new-vt-inline'); if(vtInline){ vtInline.value = 'R$5,75'; vtInline.dataset.cents = String(Math.round(5.75*100)); }
+      const vaInline = document.getElementById('new-va-inline'); if(vaInline){ vaInline.value = 'R$29,15'; vaInline.dataset.cents = String(Math.round(29.15*100)); }
     });
   }
 
@@ -228,5 +270,5 @@
   if(insalSim){ insalSim.addEventListener('change', ()=>{ if(insalOpts) insalOpts.style.display = insalSim.checked ? 'block' : 'none'; }); }
   if(insalNao){ insalNao.addEventListener('change', ()=>{ if(insalOpts) insalOpts.style.display = insalNao.checked ? 'none' : insalOpts.style.display; }); }
 
-  renderResponsesCount();
+    
 })();
