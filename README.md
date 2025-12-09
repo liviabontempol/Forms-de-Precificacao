@@ -17,27 +17,27 @@ Sistema composto por frontend (formulário) e backend responsável por processar
 ---
 
 ## Requisitos Funcionais
-Receber dados do formulário
-Calcular adicionais
-Calcular encargos
-Gerar planilha Excel
-Disponibilizar download
-Modularizar cálculos
-Validar entrada
-Tratar erros
+- Receber dados do formulário
+- Calcular adicionais
+- Calcular encargos
+- Gerar planilha Excel
+- Disponibilizar download
+- Modularizar cálculos
+- Validar entrada
+- Tratar erros
 
 ---
 
 ## Casos de Uso
-Preencher dados para precificação
-Gerar planilha
-Baixar planilha
-Alterar informações de cargos existentes
+- Preencher dados para precificação
+- Gerar planilha
+- Baixar planilha
+- Alterar informações de cargos existentes
 
 ---
 
 ## Tecnologias
-Node.js
-Express
-ExcelJS
-HTML/CSS/JS
+- Node.js
+- Express
+- ExcelJS
+- HTML/CSS/JS
