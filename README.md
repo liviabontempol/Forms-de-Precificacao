@@ -2,17 +2,18 @@
 
 Automação de cálculos trabalhistas, adicionais, encargos e geração de planilhas Excel padronizadas.
 
+
 Sistema composto por frontend (formulário) e backend responsável por processar cálculos e gerar automaticamente uma planilha Excel conforme o modelo oficial da empresa.
 
 ---
 
 ## Funcionalidades
-<item> Formulário para entrada de dados </item>
-<item> API /gerar-planilha </item>
-<item> Cálculo automático de adicionais e encargos </item>
-<item> Geração de planilha Excel </item>
-<item> Download automático </item>
-<item> Cálculos modularizados em /utils </item>
+- Formulário para entrada de dados 
+- API /gerar-planilha 
+- Cálculo automático de adicionais e encargos 
+- Geração de planilha Excel 
+- Download automático 
+- Cálculos modularizados em /utils 
 
 ---
 
