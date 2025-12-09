@@ -8,10 +8,9 @@ const __dirname = path.dirname(__filename);
 
 export async function gerarPlanilha(dados) {
   // normaliza / defaults
-  const quantidade = Number(dados.quantidade ?? 1);
+  const quantidade = Number(dados.quantidade ?? 0);
   const salarioBase = Number(dados.salarioBase ?? 0);
-  // Encargos percentuais: valores fixos (não são fornecidos pelo usuário)
-  // Social charges are fixed and come from the contract/business rules.
+ 
   const encargosPercentuais = {
     inss: 0.20,
     sesi: 0.015,
@@ -28,7 +27,6 @@ export async function gerarPlanilha(dados) {
     incidenciaM1sobre13eFerias: 0.0769,
     afastamentoMaternidade: 0.00003,
     incidenciaM1sobreAfastMaternidade: 0.0001,
-    // avisos prévios e incidências relacionadas (valores fornecidos)
     avisoPrevioIndenizado: 0.0327,
     incidenciaFgtsAvisoPrevioIndenizado: 0.002616,
     multaFgtsAvisoPrevioIndenizado: 0.0002,
@@ -49,8 +47,13 @@ export async function gerarPlanilha(dados) {
   let somaModulo1Unit = 0;
 
   const beneficios = dados.beneficios ?? {};
-  const vt = Number(beneficios.vt ?? 0);
-  const va = Number(beneficios.vr ?? (beneficios.va ?? 0));
+  // VT e VA: agora são valores fixos (como o `salarioMinimo`).
+  // Valores padrão mantidos conforme front-end antigo, mas podem ser sobrescritos
+  // por variáveis de ambiente `VT_FIXO` e `VA_FIXO` se necessário.
+  const VT_FIXO = Number(process.env.VT_FIXO ?? 5.75);
+  const VA_FIXO = Number(process.env.VA_FIXO ?? 29.15);
+  const vt = VT_FIXO;
+  const va = VA_FIXO;
   // Outros benefícios (unitário) — permitir `beneficios.outros` como número
   const outrosBenef = Number(beneficios.outros ?? 0);
 
@@ -136,8 +139,9 @@ export async function gerarPlanilha(dados) {
   // vtUnit = (3 * vt) - (0.06 * somaModulo1Unit)
   // vrUnit = (va * 22) - (0.20 * va)
   // Se vt/va não forem informados, tratar como 0 (sem default fixo).
+  // Como VT/VA são fixos, usa-se os valores fixos para os cálculos abaixo.
   const vtUnit = (Number.isFinite(vt) && vt > 0) ? ((3 * vt * 22) - (0.06 * somaModulo1Unit)) : 0;
-  const vrUnit = (Number.isFinite(va) && va > 0) ? ((va * 22 * quantidade) - (0.20 * va)) : 0;
+  const vrUnit = (Number.isFinite(va) && va > 0) ? ((va * 22) - (0.20 * va * 22)) : 0;
   const beneficiosDiarios = vtUnit + vrUnit;
 
   // Agora que temos os valores unitários do Módulo 2, calculamos custos diretos,
@@ -197,16 +201,7 @@ export async function gerarPlanilha(dados) {
   const valTotal21 = valA + valB + valC + valD;
   const totTotal21 = totA + totB + totC + totD;
   sheet.addRow(["Total", "", `${(pctTotal21 * 100).toFixed(2)}%`, valTotal21, totTotal21]);
-  // Detalhar encargos individuais usando `encargosPercentuais`
-  sheet.addRow(["Encargos (detalhamento)", "Percentual", "Valor Unitário (R$)", "Valor Total (R$)"]);
-  Object.entries(encargosPercentuais).forEach(([nome, pct]) => {
-    const pctNum = Number(pct || 0);
-    const valor = somaModulo1Unit * pctNum;
-    sheet.addRow([`Encargo: ${nome.toUpperCase()}`, `${(pctNum * 100).toFixed(2)}%`, valor, (valor * quantidade)]);
-  });
-  // linha resumida de encargos (soma)
-  sheet.addRow(["Encargos (total)", `${Number(encargosPercent * 100).toFixed(2)}%`, encargos, (encargos * quantidade)]);
-  sheet.addRow([]);
+  
 
   // Submódulo 2.2 - Encargos Previdenciários (GPS), FGTS e outras contribuições
   sheet.addRow(["Submódulo 2.2 - Encargos Previdenciários (GPS), Fundo de Garantia por Tempo de Serviço (FGTS) e outras contribuições"]).font = headerStyle;

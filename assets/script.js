@@ -6,8 +6,6 @@
   const newHours = () => document.getElementById('new-hours');
   const newQuantidade = () => document.getElementById('new-quantidade');
   const newSalary = () => document.getElementById('new-salary');
-  const newVt = () => document.getElementById('new-vt');
-  const newVa = () => document.getElementById('new-va');
   const newPericulosidade = () => {
     const r = document.querySelector('input[name="periculosidade"]:checked');
     return r ? (r.value === 'sim') : false;
@@ -116,11 +114,7 @@
 
   attachCurrencyInput(salaryInput);
   attachCurrencyInput(salaryInputInline);
-  // attach to new benefit inputs
-  attachCurrencyInput(document.getElementById('new-vt'));
-  attachCurrencyInput(document.getElementById('new-va'));
-  attachCurrencyInput(document.getElementById('new-vt-inline'));
-  attachCurrencyInput(document.getElementById('new-va-inline'));
+  // NOTE: VT e VA agora são valores fixos no backend; não existem inputs para eles.
 
   
 
@@ -191,16 +185,6 @@
     // monta payload compatível com gerarPlanilha.js
     const quantidadeEl = newQuantidade();
     const quantidade = quantidadeEl ? Number(quantidadeEl.value) || 1 : 1;
-    // read benefits inputs (use dataset.cents if available)
-    const vtEl = newVt();
-    const vaEl = newVa();
-    let vtVal = 0;
-    let vaVal = 0;
-    if (vtEl && typeof vtEl.dataset.cents !== 'undefined') vtVal = Number(vtEl.dataset.cents)/100;
-    else if (vtEl) vtVal = parseBRLString(vtEl.value) || 0;
-    if (vaEl && typeof vaEl.dataset.cents !== 'undefined') vaVal = Number(vaEl.dataset.cents)/100;
-    else if (vaEl) vaVal = parseBRLString(vaEl.value) || 0;
-
     const payload = {
       cargo: name,
       jornada: hours || '',
@@ -210,7 +194,8 @@
       encargosPercent: 0.30,
       reservaTecnicaPercent: 0.08,
       salarioMinimo: Number(salary) || 0,
-      beneficios: { vt: vtVal, vr: vaVal, assistencia: 0, outros: 0 },
+      // VT e VA são fixos no backend; não são enviados pelo front-end
+      beneficios: { assistencia: 0, outros: 0 },
       adicionalNoturno: 0,
       horaIntervaloNoturno: 0,
       horaFictaNoturna: 0,
@@ -230,9 +215,7 @@
     // limpa formulário
     nameEl.value = ''; if(descEl) descEl.value = ''; if(hoursEl) hoursEl.value = '';
     if(salaryEl){ salaryEl.value = formatBRL(0); salaryEl.dataset.cents = '0'; }
-    const vtResetEl = newVt(); const vaResetEl = newVa();
-    if(vtResetEl){ vtResetEl.value = 'R$5,75'; vtResetEl.dataset.cents = String(Math.round(5.75*100)); }
-    if(vaResetEl){ vaResetEl.value = 'R$29,15'; vaResetEl.dataset.cents = String(Math.round(29.15*100)); }
+    // VT/VA removidos: nada a resetar no front-end
   });
 
   
@@ -258,8 +241,7 @@
       const opts = document.getElementById('insalubridade-options'); if(opts) opts.style.display = 'none';
       const optsInline = document.getElementById('insalubridade-options-inline'); if(optsInline) optsInline.style.display = 'none';
       const sInline = document.getElementById('new-salary-inline'); if(sInline){ sInline.value = formatBRL(0); sInline.dataset.cents = '0'; }
-      const vtInline = document.getElementById('new-vt-inline'); if(vtInline){ vtInline.value = 'R$5,75'; vtInline.dataset.cents = String(Math.round(5.75*100)); }
-      const vaInline = document.getElementById('new-va-inline'); if(vaInline){ vaInline.value = 'R$29,15'; vaInline.dataset.cents = String(Math.round(29.15*100)); }
+      // VT/VA removidos: não há campos inline para resetar
     });
   }
 

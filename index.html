@@ -38,19 +38,14 @@
 
       <label for="new-hours">Carga horária (h/semana)</label>
       <label for="new-quantidade">Quantidade (nº de postos)</label>
-      <input id="new-quantidade" name="quantidade" type="number" min="1" placeholder="1" value="1" />
+      <input id="new-quantidade" name="quantidade" type="number" min="1" placeholder="0"  />
 
       <label for="new-hours">Carga horária (h/semana)</label>
       <input id="new-hours" name="hours" type="number" min="0" placeholder="40" />
 
       <label for="new-salary">Salário (R$)</label>
-      <input id="new-salary" name="salary" type="text" placeholder="0,00" value="R$0,00" />
+      <input id="new-salary" name="salary" type="text" min="0" placeholder="0,00"  />
 
-      <label for="new-vt">Vale-transporte (unitário R$)</label>
-      <input id="new-vt" name="vt" type="text" placeholder="R$0,00" value="R$5,75" />
-
-      <label for="new-va">Vale-refeição/Alimentação (unitário R$)</label>
-      <input id="new-va" name="va" type="text" placeholder="R$0,00" value="R$29,15" />
 
         <div style="margin-top:10px;display:flex;gap:8px;">
         <button type="submit">Gerar planilha</button>
@@ -91,11 +86,7 @@
       <label for="new-salary-inline">Salário-Base (R$)</label>
       <input id="new-salary-inline" type="text" placeholder="0,00" value="R$0,00" />
 
-      <label for="new-vt-inline">Vale-transporte (unitário R$)</label>
-      <input id="new-vt-inline" type="text" placeholder="R$0,00" value="R$5,75" />
-
-      <label for="new-va-inline">Vale-refeição/Alimentação (unitário R$)</label>
-      <input id="new-va-inline" type="text" placeholder="R$0,00" value="R$29,15" />
+      <!-- VT e VA agora são valores fixos; campos removidos do formulário inline -->
 
       <div style="margin-top:10px;display:flex;gap:8px;">
         <button id="save-new-cargo" type="button">Salvar cargo</button>
