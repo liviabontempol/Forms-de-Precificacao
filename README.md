@@ -1,21 +1,43 @@
-# Formulário de Exemplo
+# Sistema de Precificação e Geração Automática de Planilhas
 
-Pequeno projeto estático com um formulário que contém:
+Automação de cálculos trabalhistas, adicionais, encargos e geração de planilhas Excel padronizadas.
 
-- Campo de escolha (`select`).
-- Campo de busca dinâmica com autocomplete e seleção múltipla.
-- Campo `escola` (com `datalist`).
-- Campo de texto.
+Sistema composto por frontend (formulário) e backend responsável por processar cálculos e gerar automaticamente uma planilha Excel conforme o modelo oficial da empresa.
 
-Como usar:
+---
 
-1. Abra `index.html` no navegador (duplo-clique ou `Live Server`).
-2. Use o campo de busca para digitar e selecionar múltiplos itens.
-3. Preencha a escola ou escolha da lista.
-4. Clique em Enviar para ver o JSON com os dados no painel.
+## Funcionalidades
+<item> Formulário para entrada de dados </item>
+<item> API /gerar-planilha </item>
+<item> Cálculo automático de adicionais e encargos </item>
+<item> Geração de planilha Excel </item>
+<item> Download automático </item>
+<item> Cálculos modularizados em /utils </item>
 
-Próximos passos/ melhorias possíveis:
+---
 
-- Alimentar sugestões por API.
-- Usar uma biblioteca de componentes para acessibilidade completa.
-- Converter para React/Vue se desejar integração com backend.
+## Requisitos Funcionais
+Receber dados do formulário
+Calcular adicionais
+Calcular encargos
+Gerar planilha Excel
+Disponibilizar download
+Modularizar cálculos
+Validar entrada
+Tratar erros
+
+---
+
+## Casos de Uso
+Preencher dados para precificação
+Gerar planilha
+Baixar planilha
+Alterar informações de cargos existentes
+
+---
+
+## Tecnologias
+Node.js
+Express
+ExcelJS
+HTML/CSS/JS
