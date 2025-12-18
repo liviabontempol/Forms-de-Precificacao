@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// DEBUG: confirmar que a versão atual do módulo está sendo carregada
+console.log('[DEBUG] carregar: gerarPlanilha.js carregado em', new Date().toISOString());
 function applyBackground(cell, argbColor) {
   cell.fill = {
     type: 'pattern',
@@ -18,7 +20,7 @@ export async function gerarPlanilha(dados) {
   // normaliza / defaults
   const quantidade = Number(dados.quantidade ?? 0);
   const salarioBase = Number(dados.salarioBase ?? 0);
- 
+
   const encargosPercentuais = {
     inss: 0.20,
     sesi: 0.015,
@@ -46,7 +48,7 @@ export async function gerarPlanilha(dados) {
     licencaPaternidade: 0.0002,
     ausenciasLegais: 0.011,
     ausenciaPorAcidenteTrabalho: 0.0247,
-    incidenciaMod1CustoReposicao: 0.0233 
+    incidenciaMod1CustoReposicao: 0.0233
   };
   // soma das porcentagens (ex: 0.2 + 0.08 + ...)
   const encargosPercent = Object.values(encargosPercentuais).reduce((s, v) => s + Number(v || 0), 0);
@@ -55,7 +57,7 @@ export async function gerarPlanilha(dados) {
   let somaModulo1Unit = 0;
 
   const beneficios = dados.beneficios ?? {};
-  
+
   const VT_FIXO = Number(process.env.VT_FIXO ?? 5.75);
   const VA_FIXO = Number(process.env.VA_FIXO ?? 29.15);
   const vt = VT_FIXO;
@@ -84,7 +86,7 @@ export async function gerarPlanilha(dados) {
   // Somatório de adicionais opcionais (unitário)
   const adicionaisUnitarios = periculosidadeValor + insalubridadeValor;
 
- 
+
   // Cria pasta temp dentro do mesmo diretório do utils (server/src/temp)
   const tempDir = path.join(__dirname, "..", "temp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -119,7 +121,7 @@ export async function gerarPlanilha(dados) {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
       cell.font = Object.assign({}, modulo1Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
+  } catch (e) { }
 
   sheet.addRow([]);
   // Cabeçalho de colunas (negrito)
@@ -179,7 +181,7 @@ export async function gerarPlanilha(dados) {
   const irpjCsll = Number(tributos.irpjCsll ?? 0);
   const totalTributosUnit = (iss + pisCofins + irpjCsll) * totalPorPosto; // se vier em fração (ex: 0.02)
 
-  const rowTotalM1 = sheet.addRow(["Total Módulo 1", "", somaModulo1Unit, (somaModulo1Unit * quantidade)]);
+  const rowTotalM1 = sheet.addRow(["Total Módulo 1", "", "", somaModulo1Unit, (somaModulo1Unit * quantidade)]);
   sheet.mergeCells(`A${rowTotalM1.number}:B${rowTotalM1.number}`);
   rowTotalM1.getCell(1).font = headerFont;
 
@@ -194,21 +196,21 @@ export async function gerarPlanilha(dados) {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
       cell.font = Object.assign({}, modulo2Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
-sheet.addRow([]);
+  } catch (e) { }
+  sheet.addRow([]);
   // Submódulo 2.1 - 13º (décimo terceiro) Salário, Férias e Adicional de Férias
   const sub21Row = sheet.addRow(["Submódulo 2.1 - 13º (décimo terceiro) Salário, Férias e Adicional de Férias"]);
   sub21Row.font = headerFont;
-  
+
   sheet.mergeCells(`A${sub21Row.number}:E${sub21Row.number}`);
   try {
     for (let c = 1; c <= 5; c++) {
       const cell = sub21Row.getCell(c);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
-      
+
     }
-  } catch (e) {}
-sheet.addRow([]);
+  } catch (e) { }
+  sheet.addRow([]);
   // cabeçalho de tabela para o submódulo
   const header21 = sheet.addRow(["2.1", "13º (décimo terceiro) Salário, Férias e Adicional de Férias", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
   header21.eachCell(c => c.font = headerFont);
@@ -245,7 +247,6 @@ sheet.addRow([]);
   // mesclar colunas A e B e deixar "Total" em negrito
   sheet.mergeCells(`A${rowTotal21.number}:B${rowTotal21.number}`);
   rowTotal21.getCell(1).font = headerFont;
-  sheet.addRow([]);
 
   // Submódulo 2.2 - Encargos Previdenciários (GPS), FGTS e outras contribuições
   sheet.addRow([]);
@@ -258,9 +259,9 @@ sheet.addRow([]);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
       cell.font = Object.assign({}, sub22Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
+  } catch (e) { }
   sheet.addRow([]);
-  const header22 = sheet.addRow(["2.2", "GPS, FGTS e outras contribuições", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const header22 = sheet.addRow(["2.2", "GPS, FGTS e outras contribuições", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
   header22.eachCell(c => c.font = headerFont);
 
   // A: INSS
@@ -330,9 +331,9 @@ sheet.addRow([]);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
       cell.font = Object.assign({}, sub23Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
+  } catch (e) { }
   sheet.addRow([]);
-  const header23 = sheet.addRow(["2.3", "Benefícios Mensais e Diários", "Quantidade", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const header23 = sheet.addRow(["2.3", "Benefícios Mensais e Diários", "Quantidade", "Valor Unitário (R$)", "Valor Total (R$)"]);
   header23.eachCell(c => c.font = headerFont);
 
   // calcular valores unitários mensais conforme modelo
@@ -367,8 +368,8 @@ sheet.addRow([]);
   rowTotal23.getCell(1).font = headerFont;
   rowTotal23.getCell(4).numFmt = '#,##0.00';
   rowTotal23.getCell(5).numFmt = '#,##0.00';
-  
-  
+
+
   // --- Quadro-Resumo do Módulo 2 - Encargos e Benefícios ---
   // calcular percentual do submódulo 2.3 em relação ao somaModulo1Unit
   const pct23 = somaModulo1Unit ? (totalValUnit23 / somaModulo1Unit) : 0;
@@ -380,8 +381,15 @@ sheet.addRow([]);
   const quadroRow = sheet.addRow(["Quadro-Resumo do Módulo 2 - Encargos e Benefícios anuais, mensais e diários"]);
   quadroRow.font = headerFont;
   sheet.mergeCells(`A${quadroRow.number}:E${quadroRow.number}`);
+  try {
+    for (let c = 1; c <= 5; c++) {
+      const cell = quadroRow.getCell(c);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+      cell.font = Object.assign({}, quadroRow.font, { color: { argb: 'FF000000' } });
+    }
+  } catch (e) { }
   sheet.addRow([]);
-  const headerQuadro = sheet.addRow(["2", "Encargos e Benefícios Anuais, Mensais e Diários", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const headerQuadro = sheet.addRow(["2", "Encargos e Benefícios Anuais, Mensais e Diários", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
   headerQuadro.eachCell(c => c.font = headerFont);
   const r21 = sheet.addRow(["2.1", "13º (décimo terceiro) Salário, Férias e Adicional de Férias", `${(pctTotal21 * 100).toFixed(2)}%`, valTotal21, totTotal21]);
   const r22 = sheet.addRow(["2.2", "GPS, FGTS e outras contribuições", `${(pctTotal22 * 100).toFixed(2)}%`, valTotal22, totTotal22]);
@@ -392,9 +400,9 @@ sheet.addRow([]);
   // aplicar formatação de moeda e percentuais nas células relevantes
   [r21, r22, r23, rTot].forEach(r => {
     // percentual na coluna 3
-    try { r.getCell(3).numFmt = '0.00%'; } catch(e){}
-    try { r.getCell(4).numFmt = '#,##0.00'; } catch(e){}
-    try { r.getCell(5).numFmt = '#,##0.00'; } catch(e){}
+    try { r.getCell(3).numFmt = '0.00%'; } catch (e) { }
+    try { r.getCell(4).numFmt = '#,##0.00'; } catch (e) { }
+    try { r.getCell(5).numFmt = '#,##0.00'; } catch (e) { }
   });
 
   // Reserva Técnica
@@ -409,9 +417,9 @@ sheet.addRow([]);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
       cell.font = Object.assign({}, modulo3Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
+  } catch (e) { }
   sheet.addRow([]);
-  const header3 = sheet.addRow(["3", "Provisão para Rescisão", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const header3 = sheet.addRow(["3", "Provisão para Rescisão", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
   header3.eachCell(c => c.font = headerFont);
 
   // A: Aviso Prévio Indenizado
@@ -458,8 +466,8 @@ sheet.addRow([]);
   // mesclar A:B e destacar 'Total'
   sheet.mergeCells(`A${rowTotal3.number}:B${rowTotal3.number}`);
   rowTotal3.getCell(1).font = headerFont;
-  try { rowTotal3.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
-  try { rowTotal3.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal3.getCell(4).numFmt = '#,##0.00'; } catch (e) { }
+  try { rowTotal3.getCell(5).numFmt = '#,##0.00'; } catch (e) { }
   // --- MÓDULO 4 - Custo de Reposição do Profissional Ausente ---
   sheet.addRow([]);
   const modulo4Row = sheet.addRow(["MÓDULO 4 - Custo de Reposição do Profissional Ausente"]);
@@ -471,9 +479,9 @@ sheet.addRow([]);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
       cell.font = Object.assign({}, modulo4Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
+  } catch (e) { }
   sheet.addRow([]);
-  const header41 = sheet.addRow(["4.1", "Ausências Legais", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const header41 = sheet.addRow(["4.1", "Ausências Legais", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
   header41.eachCell(c => c.font = headerFont);
 
   // A: Férias (0%)
@@ -521,8 +529,8 @@ sheet.addRow([]);
   const rowTotal4 = sheet.addRow(["Total", "", `${(pctTotal4 * 100).toFixed(3)}%`, valTotal4, totTotal4]);
   sheet.mergeCells(`A${rowTotal4.number}:B${rowTotal4.number}`);
   rowTotal4.getCell(1).font = headerFont;
-  try { rowTotal4.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
-  try { rowTotal4.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal4.getCell(4).numFmt = '#,##0.00'; } catch (e) { }
+  try { rowTotal4.getCell(5).numFmt = '#,##0.00'; } catch (e) { }
 
   // --- MÓDULO 5 - Insumos Diversos ---
   sheet.addRow([]);
@@ -535,9 +543,9 @@ sheet.addRow([]);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
       cell.font = Object.assign({}, modulo5Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
+  } catch (e) { }
   sheet.addRow([]);
-  const header5 = sheet.addRow(["5", "Insumos Diversos", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const header5 = sheet.addRow(["5", "Insumos Diversos", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
   header5.eachCell(c => c.font = headerFont);
 
   // allow overrides via payload.dados.insumos
@@ -574,10 +582,10 @@ sheet.addRow([]);
   const rowTotal5 = sheet.addRow(["Total", "", "", valTotal5, totTotal5]);
   sheet.mergeCells(`A${rowTotal5.number}:B${rowTotal5.number}`);
   rowTotal5.getCell(1).font = headerFont;
-  try { rowTotal5.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
-  try { rowTotal5.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal5.getCell(4).numFmt = '#,##0.00'; } catch (e) { }
+  try { rowTotal5.getCell(5).numFmt = '#,##0.00'; } catch (e) { }
 
-  
+
   // --- MÓDULO 6 - Custos Indiretos, Tributos e Lucro ---
   sheet.addRow([]);
   const modulo6Row = sheet.addRow(["MÓDULO 6 - Custos Indiretos, Tributos e Lucro"]);
@@ -589,9 +597,9 @@ sheet.addRow([]);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
       cell.font = Object.assign({}, modulo6Row.font, { color: { argb: 'FF000000' } });
     }
-  } catch (e) {}
+  } catch (e) { }
   sheet.addRow([]);
-  const header6 = sheet.addRow(["6", "Custos Indiretos, Tributos e Lucro", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const header6 = sheet.addRow(["6", "Custos Indiretos, Tributos e Lucro", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
   header6.eachCell(c => c.font = headerFont);
 
   // A: Custos Indiretos (7%) applied on totalPorPosto
@@ -618,13 +626,13 @@ sheet.addRow([]);
 
   // C.1 - Tributo Federal (COFINS) 7.60%
   const pctC1_6 = 0.076;
-  sheet.addRow(["C.1", "Tributo Federal (COFINS)", `${(pctC1_6 * 100).toFixed(2)}%`, "-", "-"]);
+  sheet.addRow(["", "C.1. Tributo Federal (COFINS)", `${(pctC1_6 * 100).toFixed(2)}%`, "-", "-"]);
   // C.2 - Tributo Federal (PIS) 1.65%
   const pctC2_6 = 0.0165;
-  sheet.addRow(["C.2", "Tributo Federal (PIS)", `${(pctC2_6 * 100).toFixed(2)}%`, "-", "-"]);
+  sheet.addRow(["", "C.2. Tributo Federal (PIS)", `${(pctC2_6 * 100).toFixed(2)}%`, "-", "-"]);
   // C.3 - Tributo Municipal (ISSQN) 5%
   const pctC3_6 = 0.05;
-  sheet.addRow(["C.3", "Tributo Municipal (ISSQN)", `${(pctC3_6 * 100).toFixed(2)}%`, "-", "-"]);
+  sheet.addRow(["", "C.3. Tributo Municipal (ISSQN)", `${(pctC3_6 * 100).toFixed(2)}%`, "-", "-"]);
 
   // D: Tributos sobre Vale Alimentação (5.263%) — base on Módulo 2.3 unit value if available
   const pctD6 = 0.05263;
@@ -634,7 +642,7 @@ sheet.addRow([]);
   sheet.addRow(["D", "Tributos sobre Vale Alimentação", `${(pctD6 * 100).toFixed(3)}%`, valD6, totD6]);
   // D.1 Tributos Municipais (especificar) 5%
   const pctD1 = 0.05;
-  sheet.addRow(["D.1", "Tributos Municipais (especificar)", `${(pctD1 * 100).toFixed(2)}%`, "-", "-"]);
+  sheet.addRow(["", "D.1. Tributos Municipais (especificar)", `${(pctD1 * 100).toFixed(2)}%`, "-", "-"]);
 
   // Total Módulo 6
   const valTotal6 = (valA6 || 0) + (valC6 || 0) + (valD6 || 0);
@@ -642,16 +650,23 @@ sheet.addRow([]);
   const rowTotal6 = sheet.addRow(["Total", "", "", valTotal6, totTotal6]);
   sheet.mergeCells(`A${rowTotal6.number}:B${rowTotal6.number}`);
   rowTotal6.getCell(1).font = headerFont;
-  try { rowTotal6.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
-  try { rowTotal6.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+  try { rowTotal6.getCell(4).numFmt = '#,##0.00'; } catch (e) { }
+  try { rowTotal6.getCell(5).numFmt = '#,##0.00'; } catch (e) { }
 
   // --- QUADRO-RESUMO DO CUSTO POR EMPREGADO ---
   sheet.addRow([]);
   const quadroFinal = sheet.addRow(["2. QUADRO-RESUMO DO CUSTO POR EMPREGADO"]);
   quadroFinal.font = headerFont;
   sheet.mergeCells(`A${quadroFinal.number}:E${quadroFinal.number}`);
+  try {
+    for (let c = 1; c <= 5; c++) {
+      const cell = quadroFinal.getCell(c);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
+      cell.font = Object.assign({}, quadroFinal.font, { color: { argb: 'FF000000' } });
+    }
+  } catch (e) { }
   sheet.addRow([]);
-  const headerFinal = sheet.addRow(["","Mão de obra vinculada à execução contratual (valor por empregado)", "", "Valor Unitário (R$)", "Valor Total (R$)" ]);
+  const headerFinal = sheet.addRow(["", "Mão de obra vinculada à execução contratual (valor por empregado)", "", "Valor Unitário (R$)", "Valor Total (R$)"]);
   headerFinal.eachCell(c => c.font = headerFont);
 
   const unitA = somaModulo1Unit || 0;
@@ -686,22 +701,22 @@ sheet.addRow([]);
 
   // formatamento moeda para essas linhas
   [rA, rB, rC, rD, rE, rSub, rF, rVal, rVal4].forEach(r => {
-    try { r.getCell(4).numFmt = '#,##0.00'; } catch (e) {}
-    try { r.getCell(5).numFmt = '#,##0.00'; } catch (e) {}
+    try { r.getCell(4).numFmt = '#,##0.00'; } catch (e) { }
+    try { r.getCell(5).numFmt = '#,##0.00'; } catch (e) { }
   });
 
-  // Tributos (se fornecidos)
-  sheet.addRow([]);
-  sheet.addRow(["TRIBUTOS (aplicados sobre total por posto se informados)"]);
-  sheet.addRow([`ISS (${Number(iss * 100).toFixed(2)}%)`, "", (iss * totalPorPosto), (iss * totalPorPosto * quantidade)]);
-  sheet.addRow([`PIS/COFINS (${Number(pisCofins * 100).toFixed(2)}%)`, "", (pisCofins * totalPorPosto), (pisCofins * totalPorPosto * quantidade)]);
-  sheet.addRow([`IRPJ/CSLL (${Number(irpjCsll * 100).toFixed(2)}%)`, "", (irpjCsll * totalPorPosto), (irpjCsll * totalPorPosto * quantidade)]);
+  // // Tributos (se fornecidos)
+  // sheet.addRow([]);
+  // sheet.addRow(["TRIBUTOS (aplicados sobre total por posto se informados)"]);
+  // sheet.addRow([`ISS (${Number(iss * 100).toFixed(2)}%)`, "", (iss * totalPorPosto), (iss * totalPorPosto * quantidade)]);
+  // sheet.addRow([`PIS/COFINS (${Number(pisCofins * 100).toFixed(2)}%)`, "", (pisCofins * totalPorPosto), (pisCofins * totalPorPosto * quantidade)]);
+  // sheet.addRow([`IRPJ/CSLL (${Number(irpjCsll * 100).toFixed(2)}%)`, "", (irpjCsll * totalPorPosto), (irpjCsll * totalPorPosto * quantidade)]);
 
-  // Totais finais simplificados
-  sheet.addRow([]);
-  sheet.addRow(["TOTAL POR POSTO (custos diretos + benefícios + tributos unit)", "", totalPorPosto, (totalPorPosto * quantidade)]);
-  sheet.addRow(["TOTAL MENSAL (todos os postos)", "", "", totalMensal]);
-  sheet.addRow([]);
+  // // Totais finais simplificados
+  // sheet.addRow([]);
+  // sheet.addRow(["TOTAL POR POSTO (custos diretos + benefícios + tributos unit)", "", totalPorPosto, (totalPorPosto * quantidade)]);
+  // sheet.addRow(["TOTAL MENSAL (todos os postos)", "", "", totalMensal]);
+  // sheet.addRow([]);
 
   // Ajustes de colunas para ficar legível
   sheet.columns.forEach(col => {

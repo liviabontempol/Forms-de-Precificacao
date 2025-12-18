@@ -18,6 +18,17 @@
     try {
         const dados = req.body; 
         const caminhoArquivo = await gerarPlanilha(dados);  
+        
+     res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, private'
+    );
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
      res.download(caminhoArquivo, path.basename(caminhoArquivo), (err) => {
       if (err) {
