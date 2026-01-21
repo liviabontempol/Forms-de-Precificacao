@@ -54,7 +54,7 @@ export async function gerarPlanilha(dados) {
   const encargosPercent = Object.values(encargosPercentuais).reduce((s, v) => s + Number(v || 0), 0);
   const reservaTecnicaPercent = Number(dados.reservaTecnicaPercent ?? 0.08); // 8% padrão
   const salarioMinimo = Number(dados.salarioMinimo ?? 1518); //salario minimo 2025
-  let somaModulo1Unit = 0;
+  let salarioFinal = 0;
 
   const beneficios = dados.beneficios ?? {};
 
@@ -107,8 +107,7 @@ export async function gerarPlanilha(dados) {
   applyBackground(titleRow.getCell(1), 'FFD9D9D9');
 
   const postoRow = sheet.addRow([`Posto de Trabalho: ${dados.cargo ?? ""} (${dados.jornada ? dados.jornada + 'h/semana' : ""})`]);
-  // mescla também a linha do posto de trabalho
-  postoRow.font = defaultFont;
+  postoRow.font = headerFont;
   sheet.mergeCells(`A${postoRow.number}:E${postoRow.number}`);
 
   // Módulo 1 (mesclado + bold)
@@ -123,7 +122,8 @@ export async function gerarPlanilha(dados) {
     }
   } catch (e) { }
 
-  sheet.addRow([]);
+  // linha espaçadora: criar referência para ajustar altura (reduz a 'espessura' visual)
+  const spacerRow = sheet.addRow([]);
   // Cabeçalho de colunas (negrito)
   const headerRow1 = sheet.addRow(["1", "Composição da Remuneração", "Quantidade", "Valor Unitário (R$)", "Valor Total (R$)"]);
   headerRow1.eachCell(c => c.font = headerFont);
@@ -148,20 +148,20 @@ export async function gerarPlanilha(dados) {
 
   // Total módulo 1 (simplificado)
   // Soma apenas das linhas exibidas no Módulo 1 (salário + adicionais mostrados)
-  somaModulo1Unit = salarioBase + adicionaisUnitarios;
+  salarioFinal = salarioBase + adicionaisUnitarios;
 
   // calcular os itens do Módulo 2 com base no salario final.
-  const valor13 = somaModulo1Unit / 12; // 13º unitário
-  const valorFerias = (somaModulo1Unit / 12) * 1.33; // férias + 1/3
-  const fgts = somaModulo1Unit * 0.08; // FGTS 8%
-  const encargos = somaModulo1Unit * encargosPercent;
+  const valor13 = salarioFinal / 12; // 13º unitário
+  const valorFerias = (salarioFinal / 12) * 1.33; // férias + 1/3
+  const fgts = salarioFinal * 0.08; // FGTS 8%
+  const encargos = salarioFinal * encargosPercent;
 
   // Calcular benefícios unitários agora que somaModulo1Unit existe (usar somente inputs)
   // vtUnit = (3 * vt) - (0.06 * somaModulo1Unit)
   // vrUnit = (va * 22) - (0.20 * va)
   // Se vt/va não forem informados, tratar como 0 (sem default fixo).
   // Como VT/VA são fixos, usa-se os valores fixos para os cálculos abaixo.
-  const vtUnit = (Number.isFinite(vt) && vt > 0) ? ((3 * vt * 22) - (0.06 * somaModulo1Unit)) : 0;
+  const vtUnit = (Number.isFinite(vt) && vt > 0) ? ((3 * vt * 22) - (0.06 * salarioFinal)) : 0;
   const vrUnit = (Number.isFinite(va) && va > 0) ? ((va * 22) - (0.20 * va * 22)) : 0;
   const beneficiosDiarios = vtUnit + vrUnit;
 
@@ -229,13 +229,13 @@ export async function gerarPlanilha(dados) {
 
   // C: Incidência do módulo 2.2 sobre A e B (usar configuração se disponível)
   const pctC = Number(encargosPercentuais.incidenciaM1sobre13eFerias || 0);
-  const valC = somaModulo1Unit * pctC;
+  const valC = salarioFinal * pctC;
   const totC = valC * quantidade;
   sheet.addRow(["C", "Incidência do módulo 2.2 sobre os itens A e B", `${(pctC * 100).toFixed(2)}%`, valC, totC]);
 
   // D: Abono Pecuniário
   const pctD = Number(encargosPercentuais.abonoPecuario || 0);
-  const valD = somaModulo1Unit * pctD;
+  const valD = salarioFinal * pctD;
   const totD = valD * quantidade;
   sheet.addRow(["D", "Abono Pecuniário", `${(pctD * 100).toFixed(2)}%`, valD, totD]);
 
@@ -266,49 +266,49 @@ export async function gerarPlanilha(dados) {
 
   // A: INSS
   const pctA2 = Number(encargosPercentuais.inss || 0);
-  const valA2 = somaModulo1Unit * pctA2;
+  const valA2 = salarioFinal * pctA2;
   const totA2 = valA2 * quantidade;
   sheet.addRow(["A", "INSS", `${(pctA2 * 100).toFixed(2)}%`, valA2, totA2]);
 
   // B: Salário Educação
   const pctB2 = Number(encargosPercentuais.salarioEducacao || 0);
-  const valB2 = somaModulo1Unit * pctB2;
+  const valB2 = salarioFinal * pctB2;
   const totB2 = valB2 * quantidade;
   sheet.addRow(["B", "Salário Educação", `${(pctB2 * 100).toFixed(2)}%`, valB2, totB2]);
 
   // C: SAT / RAT
   const pctC2 = Number(encargosPercentuais.rat || 0);
-  const valC2 = somaModulo1Unit * pctC2;
+  const valC2 = salarioFinal * pctC2;
   const totC2 = valC2 * quantidade;
   sheet.addRow(["C", "SAT (RAT)", `${(pctC2 * 100).toFixed(2)}%`, valC2, totC2]);
 
   // D: SESC/SESI
   const pctD2 = Number(encargosPercentuais.sesi || 0);
-  const valD2 = somaModulo1Unit * pctD2;
+  const valD2 = salarioFinal * pctD2;
   const totD2 = valD2 * quantidade;
   sheet.addRow(["D", "SESC/SESI", `${(pctD2 * 100).toFixed(2)}%`, valD2, totD2]);
 
   // E: SENAI/SENAC
   const pctE2 = Number(encargosPercentuais.senai || 0);
-  const valE2 = somaModulo1Unit * pctE2;
+  const valE2 = salarioFinal * pctE2;
   const totE2 = valE2 * quantidade;
   sheet.addRow(["E", "SENAI / SENAC", `${(pctE2 * 100).toFixed(2)}%`, valE2, totE2]);
 
   // F: SEBRAE
   const pctF2 = Number(encargosPercentuais.sebrae || 0);
-  const valF2 = somaModulo1Unit * pctF2;
+  const valF2 = salarioFinal * pctF2;
   const totF2 = valF2 * quantidade;
   sheet.addRow(["F", "SEBRAE", `${(pctF2 * 100).toFixed(2)}%`, valF2, totF2]);
 
   // G: INCRA
   const pctG2 = Number(encargosPercentuais.incra || 0);
-  const valG2 = somaModulo1Unit * pctG2;
+  const valG2 = salarioFinal * pctG2;
   const totG2 = valG2 * quantidade;
   sheet.addRow(["G", "INCRA", `${(pctG2 * 100).toFixed(2)}%`, valG2, totG2]);
 
   // H: FGTS
   const pctH2 = Number(encargosPercentuais.fgts || 0);
-  const valH2 = somaModulo1Unit * pctH2;
+  const valH2 = salarioFinal * pctH2;
   const totH2 = valH2 * quantidade;
   sheet.addRow(["H", "FGTS", `${(pctH2 * 100).toFixed(2)}%`, valH2, totH2]);
 
@@ -424,19 +424,19 @@ export async function gerarPlanilha(dados) {
 
   // A: Aviso Prévio Indenizado
   const pctA3 = 0.0651; // 6.5100%
-  const valA3 = somaModulo1Unit * pctA3;
+  const valA3 = salarioFinal * pctA3;
   const totA3 = valA3 * quantidade;
   sheet.addRow(["A", "Aviso Prévio Indenizado", `${(pctA3 * 100).toFixed(4)}%`, valA3, totA3]);
 
   // B: Incidência do FGTS sobre o Aviso Prévio Indenizado
   const pctB3 = 0.00430; // 0.430%
-  const valB3 = somaModulo1Unit * pctB3;
+  const valB3 = salarioFinal * pctB3;
   const totB3 = valB3 * quantidade;
   sheet.addRow(["B", "Incidência do FGTS sobre o Aviso Prévio Indenizado", `${(pctB3 * 100).toFixed(4)}%`, valB3, totB3]);
 
   // C: Multa do FGTS e contribuição social sobre o Aviso Prévio Indenizado
   const pctC3 = 0.03900; // 3.9000%
-  const valC3 = somaModulo1Unit * pctC3;
+  const valC3 = salarioFinal * pctC3;
   const totC3 = valC3 * quantidade;
   sheet.addRow(["C", "Multa do FGTS e contribuição social sobre o Aviso Prévio Indenizado", `${(pctC3 * 100).toFixed(4)}%`, valC3, totC3]);
 
@@ -454,7 +454,7 @@ export async function gerarPlanilha(dados) {
 
   // G: Outros (indenização adicional)
   const pctG3 = 0.00730; // 0.7300%
-  const valG3 = somaModulo1Unit * pctG3;
+  const valG3 = salarioFinal * pctG3;
   const totG3 = valG3 * quantidade;
   sheet.addRow(["G", "Outros (indenização adicional)", `${(pctG3 * 100).toFixed(4)}%`, valG3, totG3]);
 
@@ -490,25 +490,25 @@ export async function gerarPlanilha(dados) {
 
   // B: Ausências Legais (3.260%)
   const pctB4 = 0.03260;
-  const valB4 = somaModulo1Unit * pctB4;
+  const valB4 = salarioFinal * pctB4;
   const totB4 = valB4 * quantidade;
   sheet.addRow(["B", "Ausências Legais", `${(pctB4 * 100).toFixed(4)}%`, valB4, totB4]);
 
   // C: Licença-Paternidade (0.030%)
   const pctC4 = 0.00030;
-  const valC4 = somaModulo1Unit * pctC4;
+  const valC4 = salarioFinal * pctC4;
   const totC4 = valC4 * quantidade;
   sheet.addRow(["C", "Licença-Paternidade", `${(pctC4 * 100).toFixed(4)}%`, valC4, totC4]);
 
   // D: Ausência por acidente de trabalho (0.040%)
   const pctD4 = 0.00040;
-  const valD4 = somaModulo1Unit * pctD4;
+  const valD4 = salarioFinal * pctD4;
   const totD4 = valD4 * quantidade;
   sheet.addRow(["D", "Ausência por acidente de trabalho", `${(pctD4 * 100).toFixed(4)}%`, valD4, totD4]);
 
   // E: Afastamento Maternidade (0.010%)
   const pctE4 = 0.00010;
-  const valE4 = somaModulo1Unit * pctE4;
+  const valE4 = salarioFinal * pctE4;
   const totE4 = valE4 * quantidade;
   sheet.addRow(["E", "Afastamento Maternidade", `${(pctE4 * 100).toFixed(4)}%`, valE4, totE4]);
 
@@ -518,7 +518,7 @@ export async function gerarPlanilha(dados) {
 
   // G: Incidência do Módulo 2.2 (1.25%)
   const pctG4 = 0.0125;
-  const valG4 = somaModulo1Unit * pctG4;
+  const valG4 = salarioFinal * pctG4;
   const totG4 = valG4 * quantidade;
   sheet.addRow(["G", "Incidência do Módulo 2.2", `${(pctG4 * 100).toFixed(4)}%`, valG4, totG4]);
 
@@ -572,7 +572,7 @@ export async function gerarPlanilha(dados) {
 
   // D: Reserva Técnica (1.00%)
   const pctD5 = 0.01;
-  const valD5 = somaModulo1Unit * pctD5;
+  const valD5 = salarioFinal * pctD5;
   const totD5 = valD5 * quantidade;
   sheet.addRow(["D", "Reserva Técnica", `${(pctD5 * 100).toFixed(2)}%`, valD5, totD5]);
 
@@ -669,7 +669,7 @@ export async function gerarPlanilha(dados) {
   const headerFinal = sheet.addRow(["", "Mão de obra vinculada à execução contratual (valor por empregado)", "", "Valor Unitário (R$)", "Valor Total (R$)"]);
   headerFinal.eachCell(c => c.font = headerFont);
 
-  const unitA = somaModulo1Unit || 0;
+  const unitA = salarioFinal || 0;
   const totalA = (somaModulo1Unit || 0) * quantidade;
   const unitB = (typeof valModule2UnitTotal !== 'undefined') ? valModule2UnitTotal : 0;
   const totalB = (typeof valModule2Total !== 'undefined') ? valModule2Total : 0;
@@ -777,6 +777,24 @@ export async function gerarPlanilha(dados) {
   // Nome e salva arquivo em temp
   const nomeArquivo = `planilha_${Date.now()}.xlsx`;
   const caminhoArquivo = path.join(tempDir, nomeArquivo);
+
+  // borda fina padrão (cinza escuro) — usada para desenhar grade nas células
+  const thinBorder = { style: 'thin', color: { argb: 'FF808080' } };
+
+  const lastRow = sheet.rowCount;
+const lastCol = sheet.columnCount;
+for (let r = 1; r <= lastRow; r++) {
+  const row = sheet.getRow(r);
+  for (let c = 1; c <= lastCol; c++) {
+    const cell = row.getCell(c);
+    cell.border = {
+      top: thinBorder,
+      left: thinBorder,
+      bottom: thinBorder,
+      right: thinBorder
+    };
+  }
+}
 
   await workbook.xlsx.writeFile(caminhoArquivo);
 
