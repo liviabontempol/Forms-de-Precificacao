@@ -1,0 +1,73 @@
+[
+    {
+        "cargo": "Auxiliar de Apoio ao Educando",
+        "salario_base": "2024.30",
+        "quantidade_postos": "4700",
+        "reservaTecnica": "0.02",
+        "carga_horaria": "44",
+        "adicionalNoturno": "0",
+        "insalubridade": "0",
+        "periculosidade": "0",
+        "vigencia": "3"       
+    }
+
+    {
+        "cargo": "Cantineiro",
+        "salario_base": "1654.44",
+        "quantidade_postos": "1749",
+        "reservaTecnica": "0.016",
+        "carga_horaria": "44",
+        "adicionalNoturno": "0",
+        "insalubridade": "0",
+        "periculosidade": "0",
+        "vigencia": "4"       
+    }
+
+    {
+        "cargo": "Servente Escolar",
+        "salario_base": "1649.08",
+        "quantidade_postos": "1188",
+        "reservaTecnica": "0.02",
+        "carga_horaria": "44",
+        "adicionalNoturno": "0",
+        "insalubridade": "0",
+        "periculosidade": "0",
+        "vigencia": "4"
+    }
+
+    {
+        "cargo": "Operador de Equipamento Reprográfico",
+        "salario_base": "1654.44",
+        "quantidade_postos": "125",
+        "reservaTecnica": "0",
+        "carga_horaria": "44",
+        "adicionalNoturno": "0",
+        "insalubridade": "0",
+        "periculosidade": "0",
+        "vigencia": "2" 
+    }
+
+    {
+        "cargo": "Oficial de Manutenção Escolar",
+        "salario_base": "1654.44",
+        "quantidade_postos": "125",
+        "reservaTecnica": "0",
+        "carga_horaria": "44",
+        "adicionalNoturno": "0",
+        "insalubridade": "0",
+        "periculosidade": "0",
+        "vigencia": "2"
+    }
+
+    {
+        "cargo": "Porteiro Escolar",
+        "salario_base": "1959.13",
+        "quantidade_postos": "566",
+        "reservaTecnica": "0.01",
+        "carga_horaria": "44",
+        "adicionalNoturno": "0",
+        "insalubridade": "0",
+        "periculosidade": "0",
+        "vigencia": "4"
+    }
+]
