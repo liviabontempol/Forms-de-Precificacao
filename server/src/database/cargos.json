@@ -9,7 +9,7 @@
         "insalubridade": "0",
         "periculosidade": "0",
         "vigencia": "3"       
-    }
+    },
 
     {
         "cargo": "Cantineiro",
@@ -21,7 +21,7 @@
         "insalubridade": "0",
         "periculosidade": "0",
         "vigencia": "4"       
-    }
+    },
 
     {
         "cargo": "Servente Escolar",
@@ -33,7 +33,7 @@
         "insalubridade": "0",
         "periculosidade": "0",
         "vigencia": "4"
-    }
+    },
 
     {
         "cargo": "Operador de Equipamento Reprográfico",
@@ -45,7 +45,7 @@
         "insalubridade": "0",
         "periculosidade": "0",
         "vigencia": "2" 
-    }
+    },
 
     {
         "cargo": "Oficial de Manutenção Escolar",
@@ -57,7 +57,7 @@
         "insalubridade": "0",
         "periculosidade": "0",
         "vigencia": "2"
-    }
+    },
 
     {
         "cargo": "Porteiro Escolar",

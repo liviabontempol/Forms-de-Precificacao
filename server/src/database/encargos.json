@@ -25,7 +25,7 @@
   { "slug": "licencaPaternidade", "nome_legivel": "Licença Paternidade" },
   { "slug": "ausenciasLegais", "nome_legivel": "Ausências Legais" },
   { "slug": "ausenciaPorAcidenteTrabalho", "nome_legivel": "Ausência por Acidente de Trabalho" },
-  { "slug": "incidenciaM2CustoReposicao", "nome_legivel": "Incidência Submódulo 2.2 Custo de Reposição" }
-  { "slug": "outrosIndAdicional", "nome_legivel": "Outros (indenizacao adicional)" }
+  { "slug": "incidenciaM2CustoReposicao", "nome_legivel": "Incidência Submódulo 2.2 Custo de Reposição" },
+  { "slug": "outrosIndAdicional", "nome_legivel": "Outros (indenizacao adicional)" },
   { "slug": "outrosEspecificar", "nome_legivel": "Outros (especificar)" }
 ]
