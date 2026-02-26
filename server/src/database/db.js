@@ -67,21 +67,21 @@ db.serialize(() => {
     });
     insertCargo.finalize();
 
-    // 3. SEED: popula `valores` com valor = 0.0 para cada combinação cargo x encargo (boas práticas: garante existência e unicidade)
-    db.all(`SELECT id FROM cargos`, (err, cargosRows) => {
-        if (err) return console.error('Erro lendo cargos:', err);
-        db.all(`SELECT slug FROM encargos`, (err2, encargosRows) => {
-            if (err2) return console.error('Erro lendo encargos:', err2);
-            // popular com NULL para indicar 'não inicializado' ao invés de 0.0
-            const insertValor = db.prepare(`INSERT OR IGNORE INTO valores (percentual, cargo_id, slug) VALUES (?, ?, ?)`);
-            cargosRows.forEach(cr => {
-                encargosRows.forEach(er => {
-                    insertValor.run(null, cr.id, er.slug);
-                });
-            });
-            insertValor.finalize();
-        });
-    });
+    // inicializa `valores` com null
+    // db.all(`SELECT id FROM cargos`, (err, cargosRows) => {
+    //     if (err) return console.error('Erro lendo cargos:', err);
+    //     db.all(`SELECT slug FROM encargos`, (err2, encargosRows) => {
+    //         if (err2) return console.error('Erro lendo encargos:', err2);
+    //         // popular com NULL para indicar 'não inicializado' ao invés de 0.0
+    //         const insertValor = db.prepare(`INSERT OR IGNORE INTO valores (percentual, cargo_id, slug) VALUES (?, ?, ?)`);
+    //         cargosRows.forEach(cr => {
+    //             encargosRows.forEach(er => {
+    //                 insertValor.run(null, cr.id, er.slug);
+    //             });
+    //         });
+    //         insertValor.finalize();
+    //     });
+    // });
 });
   
 
