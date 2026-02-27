@@ -12,6 +12,45 @@ app.use(express.json());
 //app.use(express.static("public"));  serve o front, ver se faz sentido ter essa linha
 
 
+function dbGet(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
+  });
+}
+
+function dbAll(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+  });
+}
+
+async function obterDadosDoBD(cargoId) {
+  const cargo = await dbGet('SELECT * FROM cargos WHERE id = ?', [cargoId]);
+  if (!cargo) return null;
+
+  const valores = await dbAll('SELECT slug, percentual FROM valores WHERE cargo_id = ?', [cargoId]);
+
+  const encargosPercentuais = {};
+  valores.forEach(v => {
+    encargosPercentuais[v.slug] = v.percentual ?? 0;
+  });
+
+  return {
+    cargo: cargo.cargo,
+    jornada: cargo.carga_horaria,
+    quantidade: cargo.quantidade_postos,
+    salarioBase: cargo.salario_base,
+    periculosidade: !!cargo.periculosidade,
+    insalubridade: cargo.insalubridade ?? 0,
+    adicionalNoturno: !!cargo.adicional_noturno,
+    reservaTecnica: cargo.reserva_tecnica ?? 0,
+    vigencia: cargo.vigencia ?? 0,
+    encargosPercentuais
+  };
+}
+
+
+
 app.get('/cargos', (req, res) => {
   db.all('SELECT * FROM cargos', (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -97,7 +136,36 @@ app.post('/cargos', (req, res) => {
 
 app.post("/gerar-planilha", async (req, res) => {
   try {
-    const dados = req.body;
+    let dados;
+
+    // alteração de um encargo do BD
+    if (req.body.cargo_id && req.body.slug && req.body.percentual !== undefined) {
+      const dadosBD = await obterDadosDoBD(req.body.cargo_id);
+      if (!dadosBD) return res.status(404).json({ error: 'Cargo não encontrado' });
+
+      dadosBD.encargosPercentuais[req.body.slug] = Number(
+        String(req.body.percentual).replace(',', '.')
+      );
+      dados = dadosBD;
+    } 
+    //input novo
+    else if (req.body.cargo && req.body.salarioBase) {
+      dados = {
+        cargo: req.body.cargo,
+        jornada: req.body.carga_horaria ?? 0,
+        quantidade: req.body.quantidade_postos ?? 0,
+        salarioBase: Number(String(req.body.salarioBase).replace(',', '.')),
+        periculosidade: !!req.body.periculosidade,
+        insalubridade: req.body.insalubridade ?? 0,
+        adicionalNoturno: !!req.body.adicionalNoturno,
+        reservaTecnica: req.body.reservaTecnica ?? 0,
+        vigencia: req.body.vigencia ?? 0,
+        encargosPercentuais: req.body.encargosPercentuais || {}
+      };
+    } else {
+      return res.status(400).json({ error: 'Dados inválidos' });
+    }
+
     const caminhoArquivo = await gerarPlanilha(dados);
 
     res.setHeader(
