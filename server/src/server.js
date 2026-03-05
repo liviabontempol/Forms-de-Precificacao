@@ -4,6 +4,7 @@ import path from 'path';
 import cors from 'cors';
 import { gerarPlanilha } from './utils/gerarPlanilha.js';
 import db from './database/db.js';
+import valoresJSON from './database/valores.json' with { type: 'json' };
 
 const app = express();
 app.use(cors());
@@ -150,17 +151,21 @@ app.post("/gerar-planilha", async (req, res) => {
     } 
     //input novo
     else if (req.body.cargo && req.body.salarioBase) {
+      // Se não vier encargosPercentuais, usa os valores padrão do valores.json
+      const valoresPadrao = valoresJSON[0] || valoresJSON;
+      const encargosPercentuais = req.body.encargosPercentuais || valoresPadrao;
+      
       dados = {
         cargo: req.body.cargo,
-        jornada: req.body.carga_horaria ?? 0,
-        quantidade: req.body.quantidade_postos ?? 0,
+        jornada: req.body.jornada ?? req.body.carga_horaria ?? 0,
+        quantidade: req.body.quantidade ?? req.body.quantidade_postos ?? 0,
         salarioBase: Number(String(req.body.salarioBase).replace(',', '.')),
         periculosidade: !!req.body.periculosidade,
         insalubridade: req.body.insalubridade ?? 0,
         adicionalNoturno: !!req.body.adicionalNoturno,
         reservaTecnica: req.body.reservaTecnica ?? 0,
         vigencia: req.body.vigencia ?? 0,
-        encargosPercentuais: req.body.encargosPercentuais || {}
+        encargosPercentuais
       };
     } else {
       return res.status(400).json({ error: 'Dados inválidos' });
