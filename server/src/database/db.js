@@ -1,8 +1,9 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import encargosJSON from './encargos.json' assert { type: 'json' };
-import cargosJSON from './cargos.json' assert { type: 'json' };
+import encargosJSON from './encargos.json' with { type: 'json' };
+import cargosJSON from './cargos.json' with { type: 'json' };
+import valoresJSON from './valores.json' with { type: 'json' };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,7 +21,7 @@ db.serialize(() => {
 
     db.run(`CREATE TABLE IF NOT EXISTS cargos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cargo TEXT NOT NULL,
+        cargo TEXT NOT NULL UNIQUE,
         carga_horaria INTEGER,
         quantidade_postos INTEGER,
         salario_base REAL,
@@ -46,43 +47,88 @@ db.serialize(() => {
         UNIQUE(cargo_id, slug)
     )`);
 
+    // Verifica se o banco já foi inicializado
+    db.get('SELECT COUNT(*) as count FROM encargos', [], (err, row) => {
+        if (err) {
+            console.error('Erro ao verificar banco:', err.message);
+            return;
+        }
+
+        // Se já tem dados, não faz o seed novamente
+        if (row.count > 0) {
+            console.log('Banco de dados já inicializado. Pulando seed...');
+            return;
+        }
+
+        console.log('Inicializando banco de dados pela primeira vez...');
+
+        // PASSO 1: Insere todos os encargos
+        const insertEncargo = db.prepare(`INSERT OR IGNORE INTO encargos (slug, nome_legivel) VALUES (?, ?)`);
+        (encargosJSON || []).forEach(e => {
+            insertEncargo.run(e.slug, e.nome_legivel);
+        });
+        insertEncargo.finalize();
 
 
-    console.log('Sincronizando encargos e cargos a partir dos JSONs...');
+        // PASSO 2: Insere todos os cargos
+        const insertCargo = db.prepare(`INSERT OR IGNORE INTO cargos 
+        (cargo, carga_horaria, quantidade_postos, salario_base, periculosidade, insalubridade, adicional_noturno, reserva_tecnica, vigencia) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+        (cargosJSON || []).forEach(c => {
+            const salario = c.salario_base ? Number(String(c.salario_base).replace(/,/g, '.')) : null;
+            const temPerc = Number(c.periculosidade) > 0 ? 1 : 0;
+            const temIns = Number(c.insalubridade) > 0 ? 1 : 0;
+            const temAdcN = Number(c.adicional_noturno) > 0 ? 1 : 0;
+            const reservaT = c.reserva_tecnica ? Number(String(c.reserva_tecnica).replace(/,/g, '.')) : 0;
+            insertCargo.run(c.cargo, c.carga_horaria, c.quantidade_postos, salario, temPerc, temIns, temAdcN, reservaT, c.vigencia);
+        });
 
-    const insertEncargo = db.prepare(`INSERT OR IGNORE INTO encargos (slug, nome_legivel) VALUES (?, ?)`);
-    (encargosJSON || []).forEach(e => {
-        insertEncargo.run(e.slug, e.nome_legivel);
+        // PASSO 3: Só insere valores DEPOIS que os cargos foram finalizados
+        insertCargo.finalize(() => {
+            const insertValor = db.prepare(`
+            INSERT INTO valores (cargo_id, slug, percentual) 
+            VALUES (?, ?, ?)
+            ON CONFLICT(cargo_id, slug) DO UPDATE SET percentual = excluded.percentual
+        `);
+
+            (cargosJSON || []).forEach(c => {
+                // Busca o ID do cargo de forma síncrona dentro do serialize
+                db.get(`SELECT id FROM cargos WHERE cargo = ?`, [c.cargo], (err, row) => {
+                    if (err) {
+                        console.error(`Erro ao buscar cargo ${c.cargo}:`, err.message);
+                        return;
+                    }
+                    if (!row) {
+                        console.error(`Cargo não encontrado: ${c.cargo}`);
+                        return;
+                    }
+
+                    const cargoId = row.id;
+
+                    // Primeiro insere todos os valores padrão
+                    const valoresPadrao = valoresJSON[0] || valoresJSON;
+                    Object.entries(valoresPadrao).forEach(([slug, percentual]) => {
+                        insertValor.run(cargoId, slug, percentual, (err) => {
+                            if (err) console.error(`Erro ao inserir valor padrão para ${c.cargo} (${slug}):`, err.message);
+                        });
+                    });
+
+                    // Depois sobrescreve com valores_distintos se existirem
+                    if (c.valores_distintos) {
+                        Object.entries(c.valores_distintos).forEach(([slug, percentual]) => {
+                            insertValor.run(cargoId, slug, percentual, (err) => {
+                                if (err) console.error(`Erro ao inserir valor distinto para ${c.cargo} (${slug}):`, err.message);
+                            });
+                        });
+                    }
+                });
+            });
+
+            console.log('Comandos de seed enfileirados. Aguardando execução do banco...');
+        });
     });
-    insertEncargo.finalize();
-
-    const insertCargo = db.prepare(`INSERT OR IGNORE INTO cargos (cargo, salario_base, carga_horaria, quantidade_postos, periculosidade, insalubridade, adicional_noturno, reserva_tecnica, vigencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    (cargosJSON || []).forEach(c => {
-        const salario = c.salario_base ? Number(String(c.salario_base).replace(/,/g, '.')) : null;
-        const temPerc = Number(c.periculosidade) > 0 ? 1 : 0;
-        const temIns = Number(c.insalubridade) > 0 ? 1 : 0;
-        const temAdcN = Number(c.adicional_noturno) > 0 ? 1 : 0;
-        const reservaT = c.reserva_tecnica ? Number(String(c.reserva_tecnica).replace(/,/g, '.')) : 0;
-        insertCargo.run(c.cargo, c.carga_horaria, c.quantidade_postos, salario, temPerc, temIns, temAdcN, reservaT, c.vigencia);
-    });
-    insertCargo.finalize();
-
-    // inicializa `valores` com null
-    // db.all(`SELECT id FROM cargos`, (err, cargosRows) => {
-    //     if (err) return console.error('Erro lendo cargos:', err);
-    //     db.all(`SELECT slug FROM encargos`, (err2, encargosRows) => {
-    //         if (err2) return console.error('Erro lendo encargos:', err2);
-    //         // popular com NULL para indicar 'não inicializado' ao invés de 0.0
-    //         const insertValor = db.prepare(`INSERT OR IGNORE INTO valores (percentual, cargo_id, slug) VALUES (?, ?, ?)`);
-    //         cargosRows.forEach(cr => {
-    //             encargosRows.forEach(er => {
-    //                 insertValor.run(null, cr.id, er.slug);
-    //             });
-    //         });
-    //         insertValor.finalize();
-    //     });
-    // });
 });
-  
+
+
 
 export default db;

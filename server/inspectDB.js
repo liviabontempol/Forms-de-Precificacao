@@ -41,11 +41,12 @@ db.serialize(() => {
           console.log('\ncargos:');
           console.table(cargos);
         }
-        db.all('SELECT * FROM encargos LIMIT 5', (e2, encargos) => {
+        db.all('SELECT * FROM encargos', (e2, encargos) => {
           if (!e2) {
             console.log('\nencargos:');
             console.table(encargos);
           }
+          console.log('\n')
           db.all('SELECT * FROM valores LIMIT 10', (e3, valores) => {
             if (!e3) {
               console.log('\nvalores:');
