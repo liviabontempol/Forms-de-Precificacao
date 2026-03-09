@@ -148,7 +148,13 @@ app.post("/gerar-planilha", async (req, res) => {
         String(req.body.percentual).replace(',', '.')
       );
       dados = dadosBD;
-    } 
+    }
+    // buscar cargo existente apenas pelo cargo_id
+    else if (req.body.cargo_id) {
+      const dadosBD = await obterDadosDoBD(req.body.cargo_id);
+      if (!dadosBD) return res.status(404).json({ error: 'Cargo não encontrado' });
+      dados = dadosBD;
+    }
     //input novo
     else if (req.body.cargo && req.body.salarioBase) {
       // Se não vier encargosPercentuais, usa os valores padrão do valores.json
