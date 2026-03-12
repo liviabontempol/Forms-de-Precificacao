@@ -26,14 +26,23 @@ export async function gerarPlanilha(dados) {
     // Remove grid lines - leave sheet completely white
     sheet.views = [{ showGridLines: false }];
 
+    // Define larguras para abrir a planilha legivel sem ajuste manual.
+    sheet.columns = [
+        { width: 8.43 }, // A - indice/letra
+        { width: 71.43 }, // B - descricao
+        { width: 14 }, // C - percentual/quantidade
+        { width: 20 }, // D - valor unitario
+        { width: 20 }, // E - valor total
+    ];
+
     const defaultFont = { name: 'Times New Roman', size: 12 };
     const headerFont = { name: 'Times New Roman', size: 12, bold: true };
-    const titleFont = { name: 'Times New Roman', size: 16, bold: true };
+    const titleFont = { name: 'Times New Roman', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
 
     const styles = {
-        title: { font: titleFont, background: 'FFD9D9D9' },
-        mod: { font: headerFont, background: 'FFA6A6A6' },
-        submod: { font: headerFont, background: 'FFA6A6A6' },
+        title: { font: titleFont, background: '595959' },
+        mod: { font: headerFont, background: 'a5a5a5' },
+        submod: { font: headerFont, background: 'd8d8d8' },
         default: { font: defaultFont }
     };
 
@@ -245,10 +254,11 @@ export async function gerarPlanilha(dados) {
         sheet.addRow(["A", "Transporte - nao encontrado", dados.quantidade, null, null]);
     }
     // va
-    if (dados.encargosPercentuais.va !== undefined) {
+    
         const valorDiarioVA = Number(dados.encargosPercentuais.va || 0);
         const valorVA = (valorDiarioVA * 26) * 0.8;
         const totalVA = valorVA * dados.quantidade;
+    if (dados.encargosPercentuais.va !== undefined) {
         sheet.addRow(["B", `Auxílio-Refeição/Alimentação ( R$${valorDiarioVA} x 26 dias x quant.empregados - 20% VA)`, dados.quantidade, valorVA, totalVA]);
         valTotal23 += valorVA;
         totTotal23 += totalVA;
@@ -308,6 +318,7 @@ export async function gerarPlanilha(dados) {
         avisoPrevioTrabalhado: 'Aviso Prévio Trabalhado',
         incidenciaM2AvisoPrevioTrabalhado: 'Incidência dos encargos do Submódulo 2.2 sobre o Aviso Prévio Trabalhado',
         multaFgtsAvisoPrevioTrabalhado: 'Multa FGTS e contribuição social sobre o Aviso Prévio Trabalhado',
+        multaFgtsDemissaoSemJustaCausa: 'Multa do FGTS para Demissão Sem Justa Causa',        
         outrosIndAdicional: 'Outros (indenização adicional)'
     };
 
@@ -352,11 +363,14 @@ export async function gerarPlanilha(dados) {
     const encargosMod4 = {
         feriasAusenciaLegal: 'Férias',
         ausenciasLegais: 'Ausências Legais',
+        ausenciaPorDoenca: 'Ausência por doença',
         licencaPaternidade: 'Licença Paternidade',
         ausenciaPorAcidenteTrabalho: 'Ausência por Acidente de Trabalho',
         afastamentoMaternidade: 'Afastamento Maternidade',
+        incidenciaM2Maternidade: 'Incidência do Submódulo 2.2 sobre Afastamento Maternidade',
         outrosEspecificar4: 'Outros (especificar)',
-        incidenciaM2CustoReposicao: 'Incidência do Submódulo 2.2'
+        incidenciaM2CustoReposicao: 'Incidência do Submódulo 2.2',
+        
     };
 
     //cabecalho modulo 4
@@ -396,12 +410,6 @@ export async function gerarPlanilha(dados) {
     applyStyle(modulo5Row, styles.mod);
     addSpacerRow();
 
-    const encargosMod5 = {
-        uniformes: 'Uniformes',
-        materiais: 'Materiais',
-        equipamentosProtecaoIndividual: 'Equipamentos de Proteção Individual',
-        reservaTecnica: 'Reserva Técnica'
-    };
 
     //cabecalho modulo 5
     const header5 = sheet.addRow(["5", "Insumos Diversos", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
@@ -423,7 +431,7 @@ export async function gerarPlanilha(dados) {
     if (dados.encargosPercentuais.materiais !== undefined) {
         const valormateriais = Number(dados.encargosPercentuais.materiais || 0);
         const totalmateriais = valormateriais * dados.quantidade;
-        sheet.addRow(["A", "materiais", "", valormateriais, totalmateriais]);
+        sheet.addRow(["B", "Materiais", "", valormateriais, totalmateriais]);
         valTotal5 += valormateriais;
         totTotal5 += totalmateriais;
     }
@@ -432,7 +440,7 @@ export async function gerarPlanilha(dados) {
     if (dados.encargosPercentuais.equipamentosProtecaoIndividual !== undefined) {
         const valorequipamentosProtecaoIndividual = Number(dados.encargosPercentuais.equipamentosProtecaoIndividual || 0);
         const totalequipamentosProtecaoIndividual = valorequipamentosProtecaoIndividual * dados.quantidade;
-        sheet.addRow(["A", "equipamentosProtecaoIndividual", "", valorequipamentosProtecaoIndividual, totalequipamentosProtecaoIndividual]);
+        sheet.addRow(["C", "Equipamentos de Proteção Individual", "", valorequipamentosProtecaoIndividual, totalequipamentosProtecaoIndividual]);
         valTotal5 += valorequipamentosProtecaoIndividual;
         totTotal5 += totalequipamentosProtecaoIndividual;
     }
@@ -442,7 +450,7 @@ export async function gerarPlanilha(dados) {
         const pctReservaTecnica = Number(dados.encargosPercentuais.reservaTecnica || 0);
         const valorReservaTecnica = salarioFinal * pctReservaTecnica;
         const totalReservaTecnica = valorReservaTecnica * dados.quantidade;
-        sheet.addRow(["C", "Reserva Técnica", `${(pctReservaTecnica * 100).toFixed(2)}%`, valorReservaTecnica, totalReservaTecnica]);
+        sheet.addRow(["D", "Reserva Técnica", `${(pctReservaTecnica * 100).toFixed(2)}%`, valorReservaTecnica, totalReservaTecnica]);
         valTotal5 += valorReservaTecnica;
         totTotal5 += totalReservaTecnica;
     }
@@ -450,7 +458,7 @@ export async function gerarPlanilha(dados) {
     // Total
     const rowTotal5 = sheet.addRow(["Total", "", "", valTotal5, totTotal5]);
     sheet.mergeCells(`A${rowTotal5.number}:B${rowTotal5.number}`);
-    rowTotal4.getCell(1).font = headerFont;
+    rowTotal5.getCell(1).font = headerFont;
     addSpacerRow();
 
 
@@ -460,22 +468,100 @@ export async function gerarPlanilha(dados) {
     applyStyle(modulo6Row, styles.mod);
     addSpacerRow();
 
-    const encargosMod6 = {
-        custosIndiretos: 'Custos Indiretos',
-        confins: 'Tributo Federal (CONFINS)',
-        pis: 'Tributo Federal (PIS)',
-        issqn: 'Tributo Municipal (ISSQN)',
-        tributosValeAlimentacao: 'Tributos sobre Vale Alimentação',
-        tributosMunicipais: 'Tributos Municipais (especificar)'
-    };
+    const somModulos1a5 = salarioFinal + quadroValorTotal + valTotal3 + valTotal4 + valTotal5;
+
 
     //cabecalho modulo 6
     const header6 = sheet.addRow(["6", "Custos Indiretos, Tributos e Lucro", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
     header6.eachCell(c => c.font = headerFont);
 
-    //********************************************* */
+    let valTotal6 = 0;
+    let totTotal6 = 0;
 
+    // custos indiretos
+    if (dados.encargosPercentuais.custosIndiretos !== undefined) {
+        const pctCustosIndiretos = Number(dados.encargosPercentuais.custosIndiretos || 0);
+        const valorCustosIndiretos = somModulos1a5 * pctCustosIndiretos;
+        const totalCustosIndiretos = valorCustosIndiretos * dados.quantidade;
+        sheet.addRow(["A", "Custos Indiretos", `${(pctCustosIndiretos * 100).toFixed(2)}%`, valorCustosIndiretos, totalCustosIndiretos]);
+        valTotal6 += valorCustosIndiretos;
+        totTotal6 += totalCustosIndiretos;
+    }
 
+    // lucro
+    if (dados.encargosPercentuais.lucro !== undefined) {
+        const pctLucro = Number(dados.encargosPercentuais.lucro || 0);
+        const valorLucro = (somModulos1a5 - valTotal23) * pctLucro;
+        const totalLucro = valorLucro * dados.quantidade;
+        sheet.addRow(["B", "Lucro", `${(pctLucro * 100).toFixed(2)}%`, valorLucro, totalLucro]);
+        valTotal6 += valorLucro;
+        totTotal6 += totalLucro;
+    }
+
+    // tributos **********somatorio de todos os tributos
+        const pctTributos = Number(dados.encargosPercentuais.lucro || 0); /** FAZER LOGICA AQUI */
+        const valorTributos = /**fazer logica */0;
+        const totalTributos = valorTributos * dados.quantidade;
+        sheet.addRow(["C", "Tributos", `${(pctTributos * 100).toFixed(2)}%`, valorTributos, totalTributos]);
+        valTotal6 += valorTributos;
+        totTotal6 += totalTributos;
+    
+
+    // confins
+    if (dados.encargosPercentuais.confins !== undefined) {
+        const pctConfins = Number(dados.encargosPercentuais.confins || 0);
+        const valorConfins = 0;
+        const totalConfins = valorConfins * dados.quantidade;
+        sheet.addRow(["", "C.1. Tributo Federal (COFINS)", `${(pctConfins * 100).toFixed(2)}%`, valorConfins, totalConfins]);
+        valTotal6 += valorConfins;
+        totTotal6 += totalConfins;
+    }
+
+    // pis
+    if (dados.encargosPercentuais.pis !== undefined) {
+        const pctPis = Number(dados.encargosPercentuais.pis || 0);
+        const valorPis = 0;
+        const totalPis = valorPis * dados.quantidade;
+        sheet.addRow(["", "C.2. Tributo Federal (PIS)", `${(pctPis * 100).toFixed(2)}%`, valorPis, totalPis]);
+        valTotal6 += valorPis;
+        totTotal6 += totalPis;
+    }
+
+    // issqn
+    if (dados.encargosPercentuais.issqn !== undefined) {
+        const pctIssqn = Number(dados.encargosPercentuais.issqn || 0);
+        const valorIssqn = 0;
+        const totalIssqn = valorIssqn * dados.quantidade;
+        sheet.addRow(["", "C.3. Tributos Municipais (ISSQN)", `${(pctIssqn * 100).toFixed(2)}%`, valorIssqn, totalIssqn]);
+        valTotal6 += valorIssqn;
+        totTotal6 += totalIssqn;
+    }
+
+    // tributosValeAlimentacao
+    if (dados.encargosPercentuais.tributosValeAlimentacao !== undefined) {
+        const pcttributosValeAlimentacao = Number(dados.encargosPercentuais.tributosValeAlimentacao || 0); /**FAZER LOGICA AQUI */
+        const valortributosValeAlimentacao = valorVA * pcttributosValeAlimentacao;
+        const totaltributosValeAlimentacao = valortributosValeAlimentacao * dados.quantidade;
+        sheet.addRow(["D", "Tributos sobre Vale Alimentação", `${(pcttributosValeAlimentacao * 100).toFixed(2)}%`, valortributosValeAlimentacao, totaltributosValeAlimentacao]);
+        valTotal6 += valortributosValeAlimentacao;
+        totTotal6 += totaltributosValeAlimentacao;
+    }
+
+    // tributosMunicipais
+    if (dados.encargosPercentuais.tributosMunicipais !== undefined) {
+        const pctTributosMunicipais = Number(dados.encargosPercentuais.tributosMunicipais || 0);
+        const valorTributosMunicipais = 0;
+        const totalTributosMunicipais = valorTributosMunicipais * dados.quantidade;
+        sheet.addRow(["", "D.1. Tributos Municipais (especificar)", `${(pctTributosMunicipais * 100).toFixed(2)}%`, valorTributosMunicipais, totalTributosMunicipais]);
+        valTotal6 += valorTributosMunicipais;
+        totTotal6 += totalTributosMunicipais;
+    }
+
+    // Total
+    const rowTotal6 = sheet.addRow(["Total", "", "", valTotal6, totTotal6]);
+    sheet.mergeCells(`A${rowTotal6.number}:B${rowTotal6.number}`);
+    rowTotal6.getCell(1).font = headerFont;
+    addSpacerRow();
 
 
     //quadro resumo 
@@ -485,29 +571,37 @@ export async function gerarPlanilha(dados) {
     addSpacerRow();
 
     //cabecalho modulo QuadroResumo
-    const headerQuadroResumo = sheet.addRow(["QuadroResumo", "Insumos Diversos", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
+    const headerQuadroResumo = sheet.addRow(["", "Mão de obra vinculada à execução contratual (valor por empregado)", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
     headerQuadroResumo.eachCell(c => c.font = headerFont);
 
+   
     sheet.addRow(["A", "Módulo 1 - Composição da Remuneração", "", salarioFinal, salarioFinal * dados.quantidade]);
     sheet.addRow(["B", "Módulo 2 - Encargos e Benefícios Anuais, Mensais e Diários", "", quadroValorTotal, quadroValorTotal * dados.quantidade]);
     sheet.addRow(["C", "Módulo 3 - Provisão para Rescisão", "", valTotal3, valTotal3 * dados.quantidade]);
     sheet.addRow(["D", "Módulo 4 - Custo de Reposição do Profissional Ausente", "", valTotal4, valTotal4 * dados.quantidade]);
-    const rSub = sheet.addRow(["Subtotal (A + B + C + D + E)", "", "", valTotal5, valTotal5 * dados.quantidade]);
-    //sheet.addRow(["F", "Módulo 6 – Custos Indiretos, Tributos e Lucro", "", valTotal6, totTotal6]);
+    const rSub = sheet.addRow(["", "Subtotal (A + B + C + D + E)", "", somModulos1a5, somModulos1a5 * dados.quantidade]);
+    rSub.eachCell(c => c.font = headerFont) 
+    sheet.addRow(["F", "Módulo 6 - Custos Indiretos, Tributos e Lucro", "", valTotal6, totTotal6]);
 
-    const quadroResumoFinalValorTotal = salarioFinal + quadroValorTotal + valTotal3 + valTotal4 + valTotal5 /*+ valTotal6 */;
-    const quadroResumoFinalTotTotal = (salarioFinal*dados.quantidade) + quadroTotTotal + totTotal3 + totTotal4 + totTotal5 /*+ totTotal6 */;
+    const quadroResumoFinalValorTotal = somModulos1a5 + valTotal6 ;
+    const quadroResumoFinalTotTotal = (salarioFinal*dados.quantidade) + quadroTotTotal + totTotal3 + totTotal4 + totTotal5 + totTotal6 ;
 
     //total do quadro resumo final
-    const quadroResumoFinalTotal = sheet.addRow(["Total", "", "", quadroResumoFinalValorTotal, quadroResumoFinalTotTotal]);
+    const quadroResumoFinalTotal = sheet.addRow(["Valor Total", "", "", quadroResumoFinalValorTotal, quadroResumoFinalTotTotal]);
     sheet.mergeCells(`A${quadroResumoFinalTotal.number}:B${quadroResumoFinalTotal.number}`);
-    quadroResumoFinalTotal.getCell(1).font = headerFont;
+    quadroResumoFinalTotal.eachCell(c => c.font = headerFont);
+
+    const qrTotalMeses = quadroResumoFinalValorTotal * dados.vigencia;
+
+    const quadroResumoFinalTotalMeses = sheet.addRow([`Valor Total (${dados.vigencia} meses)`, "", "", qrTotalMeses, qrTotalMeses * dados.quantidade]);
+    sheet.mergeCells(`A${quadroResumoFinalTotalMeses.number}:B${quadroResumoFinalTotalMeses.number}`);
+    quadroResumoFinalTotalMeses.eachCell(c => c.font = headerFont);
+
+
     addSpacerRow();
 
 
-    //********************************************* */
-
-
+   
 
     // estilizacao final e formatacao
     const borderStyle = {
@@ -524,7 +618,22 @@ export async function gerarPlanilha(dados) {
             for (let col = 1; col <= 5; col++) {
                 const cell = row.getCell(col);
                 cell.border = borderStyle;
-                cell.alignment = { vertical: 'middle' };
+                const isHeaderFont =
+                    cell.font?.bold === true &&
+                    cell.font?.name === headerFont.name &&
+                    cell.font?.size === headerFont.size;
+
+                    const isTitleFont =     
+                    cell.font?.bold === true &&
+                    cell.font?.name === titleFont.name &&
+                    cell.font?.size === titleFont.size;
+
+                // Keep header cells centered while applying vertical alignment globally.
+                if (isHeaderFont || isTitleFont) {
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                } else {
+                    cell.alignment = { vertical: 'middle' };
+                }
 
                 if (rowNumber > 6) {
                     if (col === 4 || col === 5) {

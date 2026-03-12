@@ -159,7 +159,21 @@ app.post("/gerar-planilha", async (req, res) => {
     else if (req.body.cargo && req.body.salarioBase) {
       // Se não vier encargosPercentuais, usa os valores padrão do valores.json
       const valoresPadrao = valoresJSON[0] || valoresJSON;
-      const encargosPercentuais = req.body.encargosPercentuais || valoresPadrao;
+      const encargosEntrada = (req.body.encargosPercentuais && typeof req.body.encargosPercentuais === 'object')
+        ? req.body.encargosPercentuais
+        : {};
+
+      const reservaRaw = req.body.reservaTecnica;
+      const reservaParsed = (reservaRaw == null || reservaRaw === '')
+        ? 0
+        : Number(String(reservaRaw).replace(',', '.'));
+      const reservaTecnica = Number.isFinite(reservaParsed) ? reservaParsed : 0;
+
+      const encargosPercentuais = {
+        ...valoresPadrao,
+        ...encargosEntrada,
+        reservaTecnica
+      };
       
       dados = {
         cargo: req.body.cargo,
@@ -169,7 +183,7 @@ app.post("/gerar-planilha", async (req, res) => {
         periculosidade: !!req.body.periculosidade,
         insalubridade: req.body.insalubridade ?? 0,
         adicionalNoturno: !!req.body.adicionalNoturno,
-        reservaTecnica: req.body.reservaTecnica ?? 0,
+        reservaTecnica,
         vigencia: req.body.vigencia ?? 0,
         encargosPercentuais
       };

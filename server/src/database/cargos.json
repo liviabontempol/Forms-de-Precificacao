@@ -18,7 +18,10 @@
             "licencaPaternidade": 0.0001,
             "ausenciaPorAcidenteTrabalho": 0.0003,
             "afastamentoMaternidade": 0.0012,
-            "incidenciaM2CustoReposicao": 0.0138
+            "incidenciaM2CustoReposicao": 0.0138,
+            "ausenciaPorDoenca": 0,
+            "multaFgtsDemissaoSemJustaCausa": 0,
+            "incidenciaM2Maternidade": 0
         },
         "reservaTecnica": "0.02",
         "carga_horaria": "44",
@@ -46,7 +49,10 @@
             "licencaPaternidade": 0.0003,
             "ausenciaPorAcidenteTrabalho": 0.0004,
             "afastamentoMaternidade": 0.0001,
-            "incidenciaM2CustoReposicao": 0.0125
+            "incidenciaM2CustoReposicao": 0.0125,
+            "ausenciaPorDoenca": 0,
+            "multaFgtsDemissaoSemJustaCausa": 0,
+            "incidenciaM2Maternidade": 0
         },
         "reservaTecnica": "0.016",
         "carga_horaria": "44",
@@ -74,7 +80,10 @@
             "licencaPaternidade": 0.0003,
             "ausenciaPorAcidenteTrabalho": 0.0004,
             "afastamentoMaternidade": 0.0001,
-            "incidenciaM2CustoReposicao": 0.0125
+            "incidenciaM2CustoReposicao": 0.0125,
+            "ausenciaPorDoenca": 0,
+            "multaFgtsDemissaoSemJustaCausa": 0,
+            "incidenciaM2Maternidade": 0
         },
         "reservaTecnica": "0.02",
         "carga_horaria": "44",
@@ -102,7 +111,10 @@
             "licencaPaternidade": 0.0003,
             "ausenciaPorAcidenteTrabalho": 0.0004,
             "afastamentoMaternidade": 0.0001,
-            "incidenciaM2CustoReposicao": 0.0125
+            "incidenciaM2CustoReposicao": 0.0125,
+            "ausenciaPorDoenca": 0,
+            "multaFgtsDemissaoSemJustaCausa": 0,
+            "incidenciaM2Maternidade": 0
         },
         "reservaTecnica": "0",
         "carga_horaria": "44",
@@ -130,7 +142,10 @@
             "licencaPaternidade": 0.0003,
             "ausenciaPorAcidenteTrabalho": 0.0004,
             "afastamentoMaternidade": 0.0001,
-            "incidenciaM2CustoReposicao": 0.0125
+            "incidenciaM2CustoReposicao": 0.0125,
+            "ausenciaPorDoenca": 0,
+            "multaFgtsDemissaoSemJustaCausa": 0,
+            "incidenciaM2Maternidade": 0
         },
         "reservaTecnica": "0",
         "carga_horaria": "44",
@@ -144,7 +159,7 @@
         "salario_base": "1959.13",
         "quantidade_postos": "566",
         "valores_distintos": {
-             "salario13": 0.0916,
+            "salario13": 0.0916,
             "feriasAdicionalDeFerias": 0.1101,
             "incidenciaM2sobre13eFerias": 0.0754,
             "abonoPecuniario": 0.0011,
@@ -159,7 +174,10 @@
             "licencaPaternidade": 0.0003,
             "ausenciaPorAcidenteTrabalho": 0.0004,
             "afastamentoMaternidade": 0.0001,
-            "incidenciaM2CustoReposicao": 0.0125
+            "incidenciaM2CustoReposicao": 0.0125,
+            "ausenciaPorDoenca": 0,
+            "multaFgtsDemissaoSemJustaCausa": 0,
+            "incidenciaM2Maternidade": 0
         },
         "reservaTecnica": "0.01",
         "carga_horaria": "44",
