@@ -21,7 +21,10 @@
             "incidenciaM2CustoReposicao": 0.0138,
             "ausenciaPorDoenca": 0,
             "multaFgtsDemissaoSemJustaCausa": 0,
-            "incidenciaM2Maternidade": 0
+            "incidenciaM2Maternidade": 0,
+            "uniformes": 6.96,
+            "equipamentosProtecaoIndividual": 14.55
+
         },
         "reservaTecnica": "0.02",
         "carga_horaria": "44",
@@ -52,7 +55,9 @@
             "incidenciaM2CustoReposicao": 0.0125,
             "ausenciaPorDoenca": 0,
             "multaFgtsDemissaoSemJustaCausa": 0,
-            "incidenciaM2Maternidade": 0
+            "incidenciaM2Maternidade": 0,
+            "uniformes": 12.97,
+            "equipamentosProtecaoIndividual": 63.48
         },
         "reservaTecnica": "0.016",
         "carga_horaria": "44",
@@ -83,7 +88,9 @@
             "incidenciaM2CustoReposicao": 0.0125,
             "ausenciaPorDoenca": 0,
             "multaFgtsDemissaoSemJustaCausa": 0,
-            "incidenciaM2Maternidade": 0
+            "incidenciaM2Maternidade": 0,
+            "uniformes": 13.22,
+            "equipamentosProtecaoIndividual": 26.74
         },
         "reservaTecnica": "0.02",
         "carga_horaria": "44",
@@ -145,7 +152,8 @@
             "incidenciaM2CustoReposicao": 0.0125,
             "ausenciaPorDoenca": 0,
             "multaFgtsDemissaoSemJustaCausa": 0,
-            "incidenciaM2Maternidade": 0
+            "incidenciaM2Maternidade": 0,
+            "equipamentosProtecaoIndividual": 49.72
         },
         "reservaTecnica": "0",
         "carga_horaria": "44",
@@ -177,7 +185,9 @@
             "incidenciaM2CustoReposicao": 0.0125,
             "ausenciaPorDoenca": 0,
             "multaFgtsDemissaoSemJustaCausa": 0,
-            "incidenciaM2Maternidade": 0
+            "incidenciaM2Maternidade": 0,
+            "uniformes": 31.84,
+            "equipamentosProtecaoIndividual": 8.92
         },
         "reservaTecnica": "0.01",
         "carga_horaria": "44",

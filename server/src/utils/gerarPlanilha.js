@@ -59,7 +59,6 @@ export async function gerarPlanilha(dados) {
     }
 
     // Título 
-    sheet.addRow([]);
     const titleRow = sheet.addRow(["ANEXO I - PLANILHA DE CUSTOS E FORMAÇÃO DE PREÇOS"]);
     sheet.mergeCells(`A${titleRow.number}:E${titleRow.number}`);
     applyStyle(titleRow, styles.title);
@@ -579,8 +578,9 @@ export async function gerarPlanilha(dados) {
     sheet.addRow(["B", "Módulo 2 - Encargos e Benefícios Anuais, Mensais e Diários", "", quadroValorTotal, quadroValorTotal * dados.quantidade]);
     sheet.addRow(["C", "Módulo 3 - Provisão para Rescisão", "", valTotal3, valTotal3 * dados.quantidade]);
     sheet.addRow(["D", "Módulo 4 - Custo de Reposição do Profissional Ausente", "", valTotal4, valTotal4 * dados.quantidade]);
+    sheet.addRow(["E", "Módulo 5 - Insumos Diversos", "", valTotal5, valTotal5 * dados.quantidade]);
     const rSub = sheet.addRow(["", "Subtotal (A + B + C + D + E)", "", somModulos1a5, somModulos1a5 * dados.quantidade]);
-    rSub.eachCell(c => c.font = headerFont) 
+    rSub.eachCell(c => c.font = headerFont); 
     sheet.addRow(["F", "Módulo 6 - Custos Indiretos, Tributos e Lucro", "", valTotal6, totTotal6]);
 
     const quadroResumoFinalValorTotal = somModulos1a5 + valTotal6 ;
