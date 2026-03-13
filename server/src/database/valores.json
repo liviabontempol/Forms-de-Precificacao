@@ -38,6 +38,9 @@
     "tributosMunicipais": 0.05,
     "outrosEspecificarSub23": 0,
     "vt": 6.75,
-    "va": 29.15
+    "va": 29.15,
+    "ausenciaPorDoenca": 0.0282,
+    "multaFgtsDemissaoSemJustaCausa": 0.015,
+    "incidenciaM2Maternidade": 0.0001
 }
 ]

@@ -4,8 +4,10 @@
   const newName = () => document.getElementById('new-name');
   const newDesc = () => document.getElementById('new-desc');
   const newHours = () => document.getElementById('new-hours');
+  const newVigencia = () => document.getElementById('new-vigencia');
   const newQuantidade = () => document.getElementById('new-quantidade');
   const newSalary = () => document.getElementById('new-salary');
+  const newReservaTecnica = () => document.getElementById('new-reserva-tecnica');
   const newPericulosidade = () => {
     const r = document.querySelector('input[name="periculosidade"]:checked');
     return r ? (r.value === 'sim') : false;
@@ -17,6 +19,10 @@
   const newInsalubridadePct = () => {
     const el = document.getElementById('insalubridade-percent');
     return el ? Number(el.value) : null;
+  };
+  const newAdicionalNoturno = () => {
+    const r = document.querySelector('input[name="adicional-noturno"]:checked');
+    return r ? (r.value === 'sim') : false;
   };
 
   // Helper: parse and format BRL currency strings
@@ -35,9 +41,27 @@
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
+  function parsePercentStringToDecimal(str){
+    if (str == null) return NaN;
+    let s = String(str).replace(/\s/g, '').replace('%', '');
+    s = s.replace(/\./g, '').replace(',', '.');
+    s = s.replace(/[^0-9.-]/g, '');
+    if (s === '') return NaN;
+    const n = Number(s);
+    if (!Number.isFinite(n)) return NaN;
+    // Entrada em percentual (ex.: 8,00%) vira fração decimal (0.08).
+    return n / 100;
+  }
+
+  function formatPercentFromCenti(c){
+    const safe = Number.isFinite(c) && c >= 0 ? Math.floor(c) : 0;
+    return `${(safe / 100).toFixed(2).replace('.', ',')}%`;
+  }
+
   // Currency input: user types only digits; each new digit shifts previous to the left (cents-aware)
   const salaryInput = document.getElementById('new-salary');
   const salaryInputInline = document.getElementById('new-salary-inline');
+  const reservaTecnicaInput = document.getElementById('new-reserva-tecnica');
 
   function attachCurrencyInput(el){
     if(!el) return;
@@ -114,6 +138,67 @@
 
   attachCurrencyInput(salaryInput);
   attachCurrencyInput(salaryInputInline);
+
+  function attachPercentInput(el){
+    if(!el) return;
+
+    const initialDecimal = parsePercentStringToDecimal(el.value);
+    // "centi-percent": 8,25% => 825
+    let centiPercent = Number.isFinite(initialDecimal) ? Math.round(initialDecimal * 10000) : 0;
+    el.dataset.centiPercent = String(centiPercent);
+    el.value = formatPercentFromCenti(centiPercent);
+
+    el.addEventListener('keydown', (ev) => {
+      const allow = ['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','Enter'];
+      if(allow.includes(ev.key) || (ev.ctrlKey || ev.metaKey)) return;
+
+      if(/^[0-9]$/.test(ev.key)){
+        ev.preventDefault();
+        centiPercent = (centiPercent * 10) + Number(ev.key);
+        el.dataset.centiPercent = String(centiPercent);
+        el.value = formatPercentFromCenti(centiPercent);
+        return;
+      }
+
+      if(ev.key === 'Backspace'){
+        ev.preventDefault();
+        centiPercent = Math.floor(centiPercent / 10);
+        el.dataset.centiPercent = String(centiPercent);
+        el.value = formatPercentFromCenti(centiPercent);
+        return;
+      }
+
+      if(ev.key === 'Delete'){
+        ev.preventDefault();
+        centiPercent = 0;
+        el.dataset.centiPercent = '0';
+        el.value = formatPercentFromCenti(0);
+        return;
+      }
+
+      ev.preventDefault();
+    });
+
+    el.addEventListener('paste', (ev) => {
+      ev.preventDefault();
+      const text = (ev.clipboardData || window.clipboardData).getData('text') || '';
+      const digits = (text.match(/\d+/g) || []).join('');
+      centiPercent = digits ? Number(digits) : 0;
+      el.dataset.centiPercent = String(centiPercent);
+      el.value = formatPercentFromCenti(centiPercent);
+    });
+
+    el.addEventListener('focus', ()=>{
+      setTimeout(()=>{ el.selectionStart = el.selectionEnd = el.value.length; }, 0);
+    });
+
+    el.addEventListener('blur', ()=>{
+      const v = Number(el.dataset.centiPercent) || 0;
+      el.value = formatPercentFromCenti(v);
+    });
+  }
+
+  attachPercentInput(reservaTecnicaInput);
   // NOTE: VT e VA agora são valores fixos no backend; não existem inputs para eles.
 
   
@@ -164,12 +249,16 @@
     const nameEl = newName();
     const descEl = newDesc();
     const hoursEl = newHours();
+    const vigenciaEl = newVigencia();
     const salaryEl = newSalary();
+    const reservaTecnicaEl = newReservaTecnica();
     const name = nameEl ? nameEl.value.trim() : '';
     const periculosidade = newPericulosidade();
     const insalubridade = newInsalubridade();
     const insalubridadePct = insalubridade ? (newInsalubridadePct() || 20) : null;
+    const adicionalNoturno = newAdicionalNoturno();
     const hours = hoursEl ? hoursEl.value.trim() : '';
+    const vigencia = vigenciaEl ? Number(vigenciaEl.value) || 12 : 12;
     if(!name){ alert('Informe o nome do cargo'); return; }
     if(!hours){ alert('Informe a carga horária do novo cargo'); return; }
     // salary: prefer in-memory cents value (data-cents) from the masked input
@@ -182,6 +271,15 @@
       // normaliza salário (permite vírgula)
       salary = parseBRLString(salaryRaw);
     }
+
+    let reservaTecnica = 0;
+    if (reservaTecnicaEl && typeof reservaTecnicaEl.dataset.centiPercent !== 'undefined') {
+      reservaTecnica = (Number(reservaTecnicaEl.dataset.centiPercent) || 0) / 10000;
+    } else if (reservaTecnicaEl) {
+      const parsedReserva = parsePercentStringToDecimal(reservaTecnicaEl.value);
+      reservaTecnica = Number.isFinite(parsedReserva) ? parsedReserva : 0;
+    }
+
     // monta payload compatível com gerarPlanilha.js
     const quantidadeEl = newQuantidade();
     const quantidade = quantidadeEl ? Number(quantidadeEl.value) || 1 : 1;
@@ -191,14 +289,14 @@
       quantidade: quantidade,
       salarioBase: Number(salary) || 0,
       // defaults razoáveis; podem ser alterados no backend ou adicionados inputs no futuro
-      encargosPercent: 0.30,
-      reservaTecnicaPercent: 0.08,
+      reservaTecnica: reservaTecnica,
       salarioMinimo: Number(salary) || 0,
       // VT e VA são fixos no backend; não são enviados pelo front-end
       beneficios: { assistencia: 0, outros: 0 },
-      adicionalNoturno: 0,
+      adicionalNoturno: adicionalNoturno,
       horaIntervaloNoturno: 0,
       horaFictaNoturna: 0,
+      vigencia: vigencia,
       periculosidade: periculosidade,
       insalubridade: insalubridade ? String(insalubridadePct || 20) : false,
       tributos: { iss: 0, pisCofins: 0, irpjCsll: 0 }
@@ -215,6 +313,7 @@
     // limpa formulário
     nameEl.value = ''; if(descEl) descEl.value = ''; if(hoursEl) hoursEl.value = '';
     if(salaryEl){ salaryEl.value = formatBRL(0); salaryEl.dataset.cents = '0'; }
+    if(reservaTecnicaEl){ reservaTecnicaEl.value = '0,00%'; reservaTecnicaEl.dataset.centiPercent = '0'; }
     // VT/VA removidos: nada a resetar no front-end
   });
 
@@ -225,10 +324,14 @@
   if(cancelBtn){
     cancelBtn.addEventListener('click', ()=>{
       const n = newName(); const d = newDesc(); const h = newHours(); const s = newSalary();
+      const rt = newReservaTecnica();
+      const v = newVigencia();
       if(n) n.value = '';
       if(d) d.value = '';
       if(h) h.value = '';
+      if(v) v.value = '12';
       if(s){ s.value = formatBRL(0); s.dataset.cents = '0'; }
+      if(rt){ rt.value = '0,00%'; rt.dataset.centiPercent = '0'; }
       // limpar radios/select
       const pSim = document.getElementById('periculosidade-sim');
       const pNao = document.getElementById('periculosidade-nao');
@@ -238,10 +341,13 @@
       if(iSim) iSim.checked = false; if(iNao) iNao.checked = true;
       const pct = document.getElementById('insalubridade-percent');
       if(pct) pct.value = '20';
+      const anSim = document.getElementById('adicional-noturno-sim');
+      const anNao = document.getElementById('adicional-noturno-nao');
+      if(anSim) anSim.checked = false; if(anNao) anNao.checked = true;
       const opts = document.getElementById('insalubridade-options'); if(opts) opts.style.display = 'none';
       const optsInline = document.getElementById('insalubridade-options-inline'); if(optsInline) optsInline.style.display = 'none';
       const sInline = document.getElementById('new-salary-inline'); if(sInline){ sInline.value = formatBRL(0); sInline.dataset.cents = '0'; }
-      // VT/VA removidos: não há campos inline para resetar
+      
     });
   }
 

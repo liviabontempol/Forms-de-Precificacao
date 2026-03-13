@@ -36,15 +36,34 @@
         </div>
       </fieldset>
 
+            <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Adicional Noturno</legend>
+        <label><input type="radio" name="adicional-noturno" id="adicional-noturno-sim" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="adicional-noturno" id="adicional-noturno-nao" value="nao" checked> Não</label>
+      </fieldset>
+
+
       <label for="new-quantidade">Quantidade (nº de postos)</label>
       <input id="new-quantidade" name="quantidade" type="number" min="1" placeholder="0"  />
 
       <label for="new-hours">Carga horária (h/semana)</label>
       <input id="new-hours" name="hours" type="number" min="0" placeholder="40" />
 
+
       <label for="new-salary">Salário (R$)</label>
       <input id="new-salary" name="salary" type="text" min="0" placeholder="0,00"  />
 
+      <label for="new-reserva-tecnica">Reserva Técnica (%)</label>
+      <input id="new-reserva-tecnica" name="reservaTecnica" type="text" placeholder="0,00%" value="0,00%" />
+      
+      <label for="new-vigencia">Vigência (meses)</label>
+      <select id="new-vigencia" name="vigencia">
+        <option value="2">2 meses</option>
+        <option value="3">3 meses</option>
+        <option value="4">4 meses</option>
+        <option value="6">6 meses</option>
+        <option value="12" selected>12 meses</option>
+      </select>
 
         <div style="margin-top:10px;display:flex;gap:8px;">
         <button type="submit">Gerar planilha</button>
