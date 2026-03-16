@@ -3,26 +3,95 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Alterar Precificação — Em desenvolvimento</title>
+    <title>Alterar Precificação de Cargos</title>
     <link rel="stylesheet" href="assets/styles.css" />
+    <style>
+      .encargos-selection {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+      .encargo-item {
+        display: flex;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .encargo-item:last-child {
+        border-bottom: none;
+      }
+      .encargo-item input[type="checkbox"] {
+        margin-right: 10px;
+      }
+      .encargo-item label {
+        cursor: pointer;
+        flex: 1;
+      }
+      .valores-inputs {
+        display: none;
+      }
+      .valores-inputs.visible {
+        display: block;
+      }
+      .valor-field {
+        margin-bottom: 12px;
+      }
+      .valor-field label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+      }
+      .valor-field input {
+        width: 100%;
+      }
+      .loading {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
     <main class="container">
       <h1>Alterar Precificação de Cargos</h1>
-      <p>Esta funcionalidade ainda será implementada. Aqui você poderá buscar cargos existentes e alterar suas precificações.</p>
-      <div style="margin-top:18px;display:flex;gap:8px;">
-        <a href="index.html"><button type="button" style="background:#6b7280">Voltar</button></a>
-        <a href="precificar.html"><button type="button">Ir para Precificar Cargo Novo</button></a>
-      </div>
+      
+      <form id="alterar-form" autocomplete="off">
+        <div>
+          <label for="cargo-select">1. Selecione o cargo</label>
+          <select id="cargo-select" required>
+            <option value="">Carregando cargos...</option>
+          </select>
+        </div>
 
-      <section style="margin-top:18px;color:var(--muted)">
-        <h3>Notas para desenvolvimento</h3>
-        <ul>
-          <li>Buscar cargos já existentes (lista/BD).</li>
-          <li>Permitir edição de salário-base, jornada e adicionais.</li>
-          <li>Reutilizar `gerar-planilha` para exportar alterações.</li>
-        </ul>
-      </section>
+        <div id="encargos-section" style="display:none;">
+          <h3 style="margin-top: 24px;">2. Selecione os encargos a serem alterados</h3>
+          <div class="encargos-selection" id="encargos-list">
+            <p style="color: var(--muted);">Carregando encargos...</p>
+          </div>
+        </div>
+
+        <div id="valores-section" class="valores-inputs">
+          <h3 style="margin-top: 24px;">3. Insira os novos valores</h3>
+          <div id="valores-inputs-container"></div>
+          
+          <div style="margin-top: 20px; display: flex; gap: 8px;">
+            <button type="submit">Salvar alterações</button>
+            <button type="button" id="gerar-planilha-btn" style="background: #10b981;">Gerar planilha</button>
+            <button type="button" id="limpar-btn" style="background: #6b7280;">Limpar</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 8px;">
+          <a href="index.html"><button type="button" style="background: #6b7280;">Voltar</button></a>
+          <a href="precificar.html"><button type="button">Ir para Precificar Cargo Novo</button></a>
+        </div>
+      </form>
+
+      <section aria-live="polite" id="result" class="result" style="margin-top: 20px;"></section>
     </main>
+
+    <script src="assets/alterar.js"></script>
   </body>
 </html>

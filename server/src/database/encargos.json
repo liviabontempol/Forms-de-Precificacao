@@ -33,9 +33,14 @@
   { "slug": "equipamentosProtecaoIndividual" , "nome_legivel": "Equipamentos de Proteção Individual" },
   { "slug": "reservaTecnica", "nome_legivel": "Reserva Técnica" },
   { "slug": "custosIndiretos", "nome_legivel": "Custos Indiretos" },
+  { "slug": "lucro", "nome_legivel": "Lucro"},
   { "slug": "confins", "nome_legivel": "COFINS" },
   { "slug": "pis", "nome_legivel": "PIS" },
   { "slug": "issqn", "nome_legivel": "ISSQN" },
   { "slug": "tributosValeAlimentacao", "nome_legivel": "Tributos Vale Alimentação" },
-  { "slug": "tributosMunicipais", "nome_legivel": "Tributos Municipais" }
+  { "slug": "tributosMunicipais", "nome_legivel": "Tributos Municipais" },
+  { "slug": "ausenciaPorDoenca", "nome_legivel": "Ausência por doença"},
+  { "slug": "multaFgtsDemissaoSemJustaCausa", "nome_legivel": "Multa do FGTS para Demissão Sem Justa Causa" },
+  { "slug": "incidenciaM2Maternidade", "nome_legivel": "Incidência do Submódulo 2.2 sobre Afastamento Maternidade"}
+  
 ]

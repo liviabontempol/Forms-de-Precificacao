@@ -67,24 +67,23 @@ db.serialize(() => {
         (encargosJSON || []).forEach(e => {
             insertEncargo.run(e.slug, e.nome_legivel);
         });
-        insertEncargo.finalize();
+        
+        // PASSO 2: Só insere cargos DEPOIS que os encargos foram finalizados
+        insertEncargo.finalize(() => {
+            const insertCargo = db.prepare(`INSERT OR IGNORE INTO cargos 
+            (cargo, carga_horaria, quantidade_postos, salario_base, periculosidade, insalubridade, adicional_noturno, reserva_tecnica, vigencia) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+            (cargosJSON || []).forEach(c => {
+                const salario = c.salario_base ? Number(String(c.salario_base).replace(/,/g, '.')) : null;
+                const temPerc = Number(c.periculosidade) > 0 ? 1 : 0;
+                const temIns = Number(c.insalubridade) > 0 ? 1 : 0;
+                const temAdcN = Number(c.adicional_noturno) > 0 ? 1 : 0;
+                const reservaT = c.reserva_tecnica ? Number(String(c.reserva_tecnica).replace(/,/g, '.')) : 0;
+                insertCargo.run(c.cargo, c.carga_horaria, c.quantidade_postos, salario, temPerc, temIns, temAdcN, reservaT, c.vigencia);
+            });
 
-
-        // PASSO 2: Insere todos os cargos
-        const insertCargo = db.prepare(`INSERT OR IGNORE INTO cargos 
-        (cargo, carga_horaria, quantidade_postos, salario_base, periculosidade, insalubridade, adicional_noturno, reserva_tecnica, vigencia) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-        (cargosJSON || []).forEach(c => {
-            const salario = c.salario_base ? Number(String(c.salario_base).replace(/,/g, '.')) : null;
-            const temPerc = Number(c.periculosidade) > 0 ? 1 : 0;
-            const temIns = Number(c.insalubridade) > 0 ? 1 : 0;
-            const temAdcN = Number(c.adicional_noturno) > 0 ? 1 : 0;
-            const reservaT = c.reserva_tecnica ? Number(String(c.reserva_tecnica).replace(/,/g, '.')) : 0;
-            insertCargo.run(c.cargo, c.carga_horaria, c.quantidade_postos, salario, temPerc, temIns, temAdcN, reservaT, c.vigencia);
-        });
-
-        // PASSO 3: Só insere valores DEPOIS que os cargos foram finalizados
-        insertCargo.finalize(() => {
+            // PASSO 3: Só insere valores DEPOIS que os cargos foram finalizados
+            insertCargo.finalize(() => {
             const insertValor = db.prepare(`
             INSERT INTO valores (cargo_id, slug, percentual) 
             VALUES (?, ?, ?)
@@ -125,6 +124,7 @@ db.serialize(() => {
             });
 
             console.log('Comandos de seed enfileirados. Aguardando execução do banco...');
+            });
         });
     });
 });
