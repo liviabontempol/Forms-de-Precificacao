@@ -502,15 +502,13 @@ export async function gerarPlanilha(dados) {
     }
 
     // lucro B
-    if (dados.encargosPercentuais.lucro !== undefined) {
-        const pctLucro = Number(dados.encargosPercentuais.lucro || 0);
-        let valorLucro = (somModulos1a5 - valTotal23) * pctLucro;
-        valorLucro = roundTo2(valorLucro);
-        const totalLucro = valorLucro * dados.quantidade;
-        sheet.addRow(["B", "Lucro", `${(pctLucro * 100).toFixed(2)}%`, valorLucro, totalLucro]);
-        valTotal6 += valorLucro;
-        totTotal6 += totalLucro;
-    }
+    const pctLucro = Number(dados.encargosPercentuais.lucro || 0);
+    let valorLucro = (somModulos1a5 - valTotal23) * pctLucro;
+    valorLucro = roundTo2(valorLucro);
+    const totalLucro = valorLucro * dados.quantidade;
+    sheet.addRow(["B", "Lucro", `${(pctLucro * 100).toFixed(2)}%`, valorLucro, totalLucro]);
+    valTotal6 += valorLucro;
+    totTotal6 += totalLucro;
 
     // tributos C (somatório): ARRED((cofins + pis + issqn) / (1 - (cofins + pis + issqn)); 4)
     const pctConfinsSomatorio = Number(dados.encargosPercentuais.confins || 0);
