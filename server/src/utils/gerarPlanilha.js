@@ -16,6 +16,11 @@ function applyBackground(cell, argbColor) {
     };
 }
 
+
+function roundTo2(value) {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 export async function gerarPlanilha(dados) {
     const tempDir = path.join(__dirname, "..", "temp");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -40,9 +45,9 @@ export async function gerarPlanilha(dados) {
     const titleFont = { name: 'Times New Roman', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
 
     const styles = {
-        title: { font: titleFont, background: '595959' },
-        mod: { font: headerFont, background: 'a5a5a5' },
-        submod: { font: headerFont, background: 'd8d8d8' },
+        title: { font: titleFont, background: 'FF595959' },
+        mod: { font: headerFont, background: 'FFA5A5A5' },
+        submod: { font: headerFont, background: 'FFD8D8D8' },
         default: { font: defaultFont }
     };
 
@@ -97,9 +102,11 @@ export async function gerarPlanilha(dados) {
         }
     }
 
-    const valorAdicionalNoturno = dados.adicionalNoturno ? dados.adicionalNoturno : 0;
+    let valorAdicionalNoturno = 0;
+    //if(dados.insalubridade){   FAZER O CALCULO AQUI }
 
-    // Periculosidade (opcional - amarelo editável)
+
+    // Periculosidade
     if (dados.periculosidade) {
         sheet.addRow(["B", "Adicional de Periculosidade", "", valorPericulosidade, null]);
     } else {
@@ -162,7 +169,8 @@ export async function gerarPlanilha(dados) {
         if (percentual === undefined) return;
 
         const pct = Number(percentual || 0);
-        const val = salarioFinal * pct;
+        let val = salarioFinal * pct;
+        val = roundTo2(val);
         const tot = val * dados.quantidade;
         sheet.addRow([letraAtual21, descricao, `${(pct * 100).toFixed(2)}%`, val, tot]);
 
@@ -210,7 +218,8 @@ export async function gerarPlanilha(dados) {
         if (percentual === undefined) return;
 
         const pct = Number(percentual || 0);
-        const val = salarioFinal * pct;
+        let val = salarioFinal * pct;
+        val = roundTo2(val);
         const tot = val * dados.quantidade;
 
         sheet.addRow([letraAtual22, descricao, `${(pct * 100).toFixed(2)}%`, val, tot]);
@@ -253,10 +262,10 @@ export async function gerarPlanilha(dados) {
         sheet.addRow(["A", "Transporte - nao encontrado", dados.quantidade, null, null]);
     }
     // va
-    
-        const valorDiarioVA = Number(dados.encargosPercentuais.va || 0);
-        const valorVA = (valorDiarioVA * 26) * 0.8;
-        const totalVA = valorVA * dados.quantidade;
+
+    const valorDiarioVA = Number(dados.encargosPercentuais.va || 0);
+    const valorVA = (valorDiarioVA * 26) * 0.8;
+    const totalVA = valorVA * dados.quantidade;
     if (dados.encargosPercentuais.va !== undefined) {
         sheet.addRow(["B", `Auxílio-Refeição/Alimentação ( R$${valorDiarioVA} x 26 dias x quant.empregados - 20% VA)`, dados.quantidade, valorVA, totalVA]);
         valTotal23 += valorVA;
@@ -267,7 +276,8 @@ export async function gerarPlanilha(dados) {
     // outros (especificar)
     if (dados.encargosPercentuais.outrosEspecificarSub23 !== undefined) {
         const pctOutros = Number(dados.encargosPercentuais.outrosEspecificarSub23 || 0);
-        const valorOutros = salarioFinal * pctOutros;
+        let valorOutros = salarioFinal * pctOutros;
+        valorOutros = roundTo2(valorOutros);
         const totalOutros = valorOutros * dados.quantidade;
         sheet.addRow(["C", "Outros (especificar)", `${(pctOutros * 100).toFixed(2)}%`, valorOutros, totalOutros]);
         valTotal23 += valorOutros;
@@ -317,7 +327,7 @@ export async function gerarPlanilha(dados) {
         avisoPrevioTrabalhado: 'Aviso Prévio Trabalhado',
         incidenciaM2AvisoPrevioTrabalhado: 'Incidência dos encargos do Submódulo 2.2 sobre o Aviso Prévio Trabalhado',
         multaFgtsAvisoPrevioTrabalhado: 'Multa FGTS e contribuição social sobre o Aviso Prévio Trabalhado',
-        multaFgtsDemissaoSemJustaCausa: 'Multa do FGTS para Demissão Sem Justa Causa',        
+        multaFgtsDemissaoSemJustaCausa: 'Multa do FGTS para Demissão Sem Justa Causa',
         outrosIndAdicional: 'Outros (indenização adicional)'
     };
 
@@ -336,7 +346,8 @@ export async function gerarPlanilha(dados) {
         if (percentual === undefined) return;
 
         const pct = Number(percentual || 0);
-        const val = salarioFinal * pct;
+        let val = salarioFinal * pct;
+        val = roundTo2(val);
         const tot = val * dados.quantidade;
 
         sheet.addRow([letraAtual3, descricao, `${(pct * 100).toFixed(2)}%`, val, tot]);
@@ -369,7 +380,7 @@ export async function gerarPlanilha(dados) {
         incidenciaM2Maternidade: 'Incidência do Submódulo 2.2 sobre Afastamento Maternidade',
         outrosEspecificar4: 'Outros (especificar)',
         incidenciaM2CustoReposicao: 'Incidência do Submódulo 2.2',
-        
+
     };
 
     //cabecalho modulo 4
@@ -386,7 +397,8 @@ export async function gerarPlanilha(dados) {
         if (percentual === undefined) return;
 
         const pct = Number(percentual || 0);
-        const val = salarioFinal * pct;
+        let val = salarioFinal * pct;
+        val = roundTo2(val);
         const tot = val * dados.quantidade;
 
         sheet.addRow([letraAtual4, descricao, `${(pct * 100).toFixed(2)}%`, val, tot]);
@@ -447,7 +459,8 @@ export async function gerarPlanilha(dados) {
     // reserva tecnica
     if (dados.encargosPercentuais.reservaTecnica !== undefined) {
         const pctReservaTecnica = Number(dados.encargosPercentuais.reservaTecnica || 0);
-        const valorReservaTecnica = salarioFinal * pctReservaTecnica;
+        let valorReservaTecnica = salarioFinal * pctReservaTecnica;
+        valorReservaTecnica = roundTo2(valorReservaTecnica);
         const totalReservaTecnica = valorReservaTecnica * dados.quantidade;
         sheet.addRow(["D", "Reserva Técnica", `${(pctReservaTecnica * 100).toFixed(2)}%`, valorReservaTecnica, totalReservaTecnica]);
         valTotal5 += valorReservaTecnica;
@@ -477,39 +490,49 @@ export async function gerarPlanilha(dados) {
     let valTotal6 = 0;
     let totTotal6 = 0;
 
-    // custos indiretos
+    // custos indiretos A
     if (dados.encargosPercentuais.custosIndiretos !== undefined) {
         const pctCustosIndiretos = Number(dados.encargosPercentuais.custosIndiretos || 0);
-        const valorCustosIndiretos = somModulos1a5 * pctCustosIndiretos;
+        let valorCustosIndiretos = somModulos1a5 * pctCustosIndiretos;
+        valorCustosIndiretos = roundTo2(valorCustosIndiretos);
         const totalCustosIndiretos = valorCustosIndiretos * dados.quantidade;
         sheet.addRow(["A", "Custos Indiretos", `${(pctCustosIndiretos * 100).toFixed(2)}%`, valorCustosIndiretos, totalCustosIndiretos]);
         valTotal6 += valorCustosIndiretos;
         totTotal6 += totalCustosIndiretos;
     }
 
-    // lucro
+    // lucro B
     if (dados.encargosPercentuais.lucro !== undefined) {
         const pctLucro = Number(dados.encargosPercentuais.lucro || 0);
-        const valorLucro = (somModulos1a5 - valTotal23) * pctLucro;
+        let valorLucro = (somModulos1a5 - valTotal23) * pctLucro;
+        valorLucro = roundTo2(valorLucro);
         const totalLucro = valorLucro * dados.quantidade;
         sheet.addRow(["B", "Lucro", `${(pctLucro * 100).toFixed(2)}%`, valorLucro, totalLucro]);
         valTotal6 += valorLucro;
         totTotal6 += totalLucro;
     }
 
-    // tributos **********somatorio de todos os tributos
-        const pctTributos = Number(dados.encargosPercentuais.lucro || 0); /** FAZER LOGICA AQUI */
-        const valorTributos = /**fazer logica */0;
-        const totalTributos = valorTributos * dados.quantidade;
-        sheet.addRow(["C", "Tributos", `${(pctTributos * 100).toFixed(2)}%`, valorTributos, totalTributos]);
-        valTotal6 += valorTributos;
-        totTotal6 += totalTributos;
-    
+    // tributos C (somatório): ARRED((cofins + pis + issqn) / (1 - (cofins + pis + issqn)); 4)
+    const pctConfinsSomatorio = Number(dados.encargosPercentuais.confins || 0);
+    const pctPisSomatorio = Number(dados.encargosPercentuais.pis || 0);
+    const pctIssqnSomatorio = Number(dados.encargosPercentuais.issqn || 0);
+    const somaTributos = pctConfinsSomatorio + pctPisSomatorio + pctIssqnSomatorio;
+    const pctTributos = somaTributos >= 1
+        ? 0
+        : Math.round((((somaTributos) / (1 - somaTributos)) + Number.EPSILON) * 10000) / 10000;
+    let valorTributos = 0;
+    valorTributos = roundTo2(valorTributos);
+    const totalTributos = valorTributos * dados.quantidade;
+    sheet.addRow(["C", "Tributos", `${(pctTributos * 100).toFixed(2)}%`, valorTributos, totalTributos]);
+    valTotal6 += valorTributos;
+    totTotal6 += totalTributos;
+
 
     // confins
     if (dados.encargosPercentuais.confins !== undefined) {
         const pctConfins = Number(dados.encargosPercentuais.confins || 0);
-        const valorConfins = 0;
+        let valorConfins = 0;
+        valorConfins = roundTo2(valorConfins);
         const totalConfins = valorConfins * dados.quantidade;
         sheet.addRow(["", "C.1. Tributo Federal (COFINS)", `${(pctConfins * 100).toFixed(2)}%`, valorConfins, totalConfins]);
         valTotal6 += valorConfins;
@@ -519,7 +542,8 @@ export async function gerarPlanilha(dados) {
     // pis
     if (dados.encargosPercentuais.pis !== undefined) {
         const pctPis = Number(dados.encargosPercentuais.pis || 0);
-        const valorPis = 0;
+        let valorPis = 0;
+        valorPis = roundTo2(valorPis);
         const totalPis = valorPis * dados.quantidade;
         sheet.addRow(["", "C.2. Tributo Federal (PIS)", `${(pctPis * 100).toFixed(2)}%`, valorPis, totalPis]);
         valTotal6 += valorPis;
@@ -529,7 +553,8 @@ export async function gerarPlanilha(dados) {
     // issqn
     if (dados.encargosPercentuais.issqn !== undefined) {
         const pctIssqn = Number(dados.encargosPercentuais.issqn || 0);
-        const valorIssqn = 0;
+        let valorIssqn = 0;
+        valorIssqn = roundTo2(valorIssqn);
         const totalIssqn = valorIssqn * dados.quantidade;
         sheet.addRow(["", "C.3. Tributos Municipais (ISSQN)", `${(pctIssqn * 100).toFixed(2)}%`, valorIssqn, totalIssqn]);
         valTotal6 += valorIssqn;
@@ -539,7 +564,8 @@ export async function gerarPlanilha(dados) {
     // tributosValeAlimentacao
     if (dados.encargosPercentuais.tributosValeAlimentacao !== undefined) {
         const pcttributosValeAlimentacao = Number(dados.encargosPercentuais.tributosValeAlimentacao || 0); /**FAZER LOGICA AQUI */
-        const valortributosValeAlimentacao = valorVA * pcttributosValeAlimentacao;
+        let valortributosValeAlimentacao = valorVA * pcttributosValeAlimentacao;
+        valortributosValeAlimentacao = roundTo2(valortributosValeAlimentacao);
         const totaltributosValeAlimentacao = valortributosValeAlimentacao * dados.quantidade;
         sheet.addRow(["D", "Tributos sobre Vale Alimentação", `${(pcttributosValeAlimentacao * 100).toFixed(2)}%`, valortributosValeAlimentacao, totaltributosValeAlimentacao]);
         valTotal6 += valortributosValeAlimentacao;
@@ -570,21 +596,21 @@ export async function gerarPlanilha(dados) {
     addSpacerRow();
 
     //cabecalho modulo QuadroResumo
-    const headerQuadroResumo = sheet.addRow(["", "Mão de obra vinculada à execução contratual (valor por empregado)", "Percentual (%)", "Valor Unitário (R$)", "Valor Total (R$)"]);
+    const headerQuadroResumo = sheet.addRow(["", "Mão de obra vinculada à execução contratual (valor por empregado)", "", "Valor Unitário (R$)", "Valor Total (R$)"]);
     headerQuadroResumo.eachCell(c => c.font = headerFont);
 
-   
+
     sheet.addRow(["A", "Módulo 1 - Composição da Remuneração", "", salarioFinal, salarioFinal * dados.quantidade]);
     sheet.addRow(["B", "Módulo 2 - Encargos e Benefícios Anuais, Mensais e Diários", "", quadroValorTotal, quadroValorTotal * dados.quantidade]);
     sheet.addRow(["C", "Módulo 3 - Provisão para Rescisão", "", valTotal3, valTotal3 * dados.quantidade]);
     sheet.addRow(["D", "Módulo 4 - Custo de Reposição do Profissional Ausente", "", valTotal4, valTotal4 * dados.quantidade]);
     sheet.addRow(["E", "Módulo 5 - Insumos Diversos", "", valTotal5, valTotal5 * dados.quantidade]);
     const rSub = sheet.addRow(["", "Subtotal (A + B + C + D + E)", "", somModulos1a5, somModulos1a5 * dados.quantidade]);
-    rSub.eachCell(c => c.font = headerFont); 
+    rSub.eachCell(c => c.font = headerFont);
     sheet.addRow(["F", "Módulo 6 - Custos Indiretos, Tributos e Lucro", "", valTotal6, totTotal6]);
 
-    const quadroResumoFinalValorTotal = somModulos1a5 + valTotal6 ;
-    const quadroResumoFinalTotTotal = (salarioFinal*dados.quantidade) + quadroTotTotal + totTotal3 + totTotal4 + totTotal5 + totTotal6 ;
+    const quadroResumoFinalValorTotal = somModulos1a5 + valTotal6;
+    const quadroResumoFinalTotTotal = (salarioFinal * dados.quantidade) + quadroTotTotal + totTotal3 + totTotal4 + totTotal5 + totTotal6;
 
     //total do quadro resumo final
     const quadroResumoFinalTotal = sheet.addRow(["Valor Total", "", "", quadroResumoFinalValorTotal, quadroResumoFinalTotTotal]);
@@ -596,12 +622,10 @@ export async function gerarPlanilha(dados) {
     const quadroResumoFinalTotalMeses = sheet.addRow([`Valor Total (${dados.vigencia} meses)`, "", "", qrTotalMeses, qrTotalMeses * dados.quantidade]);
     sheet.mergeCells(`A${quadroResumoFinalTotalMeses.number}:B${quadroResumoFinalTotalMeses.number}`);
     quadroResumoFinalTotalMeses.eachCell(c => c.font = headerFont);
-
-
     addSpacerRow();
 
 
-   
+
 
     // estilizacao final e formatacao
     const borderStyle = {
@@ -623,7 +647,7 @@ export async function gerarPlanilha(dados) {
                     cell.font?.name === headerFont.name &&
                     cell.font?.size === headerFont.size;
 
-                    const isTitleFont =     
+                const isTitleFont =
                     cell.font?.bold === true &&
                     cell.font?.name === titleFont.name &&
                     cell.font?.size === titleFont.size;
@@ -635,15 +659,44 @@ export async function gerarPlanilha(dados) {
                     cell.alignment = { vertical: 'middle' };
                 }
 
-                if (rowNumber > 6) {
-                    if (col === 4 || col === 5) {
-                        if (typeof cell.value === 'number') {
-                            cell.numFmt = formatoContabil;
+                if (col === 4) {
+                    if (typeof cell.value === 'number') {
+                        cell.value = roundTo2(cell.value);
+                        cell.numFmt = formatoContabil;
+                    }
+                }
+                if (col === 5) {
+                    if (typeof cell.value === 'number') {
+                        cell.numFmt = formatoContabil;
+                    }
+                }
+                if (col === 3) {
+                    let colunaCConvertidaParaPercentual = false;
+                    if (typeof cell.value === 'string') {
+                        const percentualTexto = cell.value.trim();
+                        const percentualMatch = percentualTexto.match(/^(-?\d+(?:[.,]\d+)?)%$/);
+                        if (percentualMatch) {
+                            const percentualNormalizado = percentualMatch[1].replace(',', '.');
+                            const percentualNumero = Number(percentualNormalizado);
+                            if (!Number.isNaN(percentualNumero)) {
+                                cell.value = percentualNumero / 100;
+                                cell.numFmt = '0.00%';
+                                colunaCConvertidaParaPercentual = true;
+                            }
                         }
+
+                        // Valores sem '%' na coluna C devem permanecer numéricos inteiros.
+                        if (!colunaCConvertidaParaPercentual) {
+                            const inteiroMatch = percentualTexto.match(/^-?\d+$/);
+                            if (inteiroMatch) {
+                                cell.value = Number(percentualTexto);
+                                cell.numFmt = '0';
+                            }
+                        }
+                    } else if (typeof cell.value === 'number') {
+                        cell.numFmt = '0';
                     }
-                    if (col === 3) {
-                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                    }
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 }
             };
         };

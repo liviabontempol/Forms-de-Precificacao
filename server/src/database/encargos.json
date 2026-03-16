@@ -41,6 +41,6 @@
   { "slug": "tributosMunicipais", "nome_legivel": "Tributos Municipais" },
   { "slug": "ausenciaPorDoenca", "nome_legivel": "Ausência por doença"},
   { "slug": "multaFgtsDemissaoSemJustaCausa", "nome_legivel": "Multa do FGTS para Demissão Sem Justa Causa" },
-  { "slug": "incidenciaM2Maternidade", "nome_legivel": "Incidencia do Submódulo 2.2 sobre Afastamento Maternidade"}
+  { "slug": "incidenciaM2Maternidade", "nome_legivel": "Incidência do Submódulo 2.2 sobre Afastamento Maternidade"}
   
 ]

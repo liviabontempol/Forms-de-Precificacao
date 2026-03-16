@@ -1,4 +1,4 @@
-(function(){
+(function () {
   const form = document.getElementById('sample-form');
   const result = document.getElementById('result');
   const newName = () => document.getElementById('new-name');
@@ -26,22 +26,22 @@
   };
 
   // Helper: parse and format BRL currency strings
-  function parseBRLString(str){
+  function parseBRLString(str) {
     if (str == null) return NaN;
-    let s = String(str).replace(/\s/g,'').replace('R$','');
+    let s = String(str).replace(/\s/g, '').replace('R$', '');
     // remove thousand separators
-    s = s.replace(/\./g,'').replace(',','.');
-    s = s.replace(/[^0-9.-]/g,'');
+    s = s.replace(/\./g, '').replace(',', '.');
+    s = s.replace(/[^0-9.-]/g, '');
     const n = Number(s);
     return Number.isFinite(n) ? n : NaN;
   }
 
-  function formatBRL(n){
+  function formatBRL(n) {
     if (!Number.isFinite(n)) return 'R$0,00';
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
-  function parsePercentStringToDecimal(str){
+  function parsePercentStringToDecimal(str) {
     if (str == null) return NaN;
     let s = String(str).replace(/\s/g, '').replace('%', '');
     s = s.replace(/\./g, '').replace(',', '.');
@@ -53,7 +53,7 @@
     return n / 100;
   }
 
-  function formatPercentFromCenti(c){
+  function formatPercentFromCenti(c) {
     const safe = Number.isFinite(c) && c >= 0 ? Math.floor(c) : 0;
     return `${(safe / 100).toFixed(2).replace('.', ',')}%`;
   }
@@ -63,8 +63,8 @@
   const salaryInputInline = document.getElementById('new-salary-inline');
   const reservaTecnicaInput = document.getElementById('new-reserva-tecnica');
 
-  function attachCurrencyInput(el){
-    if(!el) return;
+  function attachCurrencyInput(el) {
+    if (!el) return;
     // initialize cents from any existing value or zero
     const initial = parseBRLString(el.value);
     let cents = Number.isFinite(initial) ? Math.round(initial * 100) : 0;
@@ -74,11 +74,11 @@
     // handle typed keys (digits build the cents value)
     el.addEventListener('keydown', (ev) => {
       // allow navigation keys
-      const allow = ['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','Enter'];
-      if(allow.includes(ev.key) || (ev.ctrlKey || ev.metaKey)) return;
+      const allow = ['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'];
+      if (allow.includes(ev.key) || (ev.ctrlKey || ev.metaKey)) return;
 
       // digits 0-9
-      if(/^[0-9]$/.test(ev.key)){
+      if (/^[0-9]$/.test(ev.key)) {
         ev.preventDefault();
         const d = Number(ev.key);
         cents = (cents * 10) + d;
@@ -88,7 +88,7 @@
       }
 
       // Backspace -> remove last digit
-      if(ev.key === 'Backspace'){
+      if (ev.key === 'Backspace') {
         ev.preventDefault();
         cents = Math.floor(cents / 10);
         el.dataset.cents = String(cents);
@@ -97,7 +97,7 @@
       }
 
       // Delete -> clear
-      if(ev.key === 'Delete'){
+      if (ev.key === 'Delete') {
         ev.preventDefault();
         cents = 0;
         el.dataset.cents = String(cents);
@@ -114,7 +114,7 @@
       ev.preventDefault();
       const text = (ev.clipboardData || window.clipboardData).getData('text') || '';
       const digits = (text.match(/\d+/g) || []).join('');
-      if(digits.length === 0) return;
+      if (digits.length === 0) return;
       // interpret pasted digits as amount in cents (e.g. '123456' -> 1234.56)
       cents = Number(digits);
       el.dataset.cents = String(cents);
@@ -122,25 +122,25 @@
     });
 
     // on focus: show numeric value without R$ (optional UX)
-    el.addEventListener('focus', ()=>{
+    el.addEventListener('focus', () => {
       // show plain number with comma for cents for easier editing if needed
       const v = Number(el.dataset.cents) || 0;
-      el.value = (v / 100).toFixed(2).replace('.',',');
-      setTimeout(()=>{ el.selectionStart = el.selectionEnd = el.value.length; }, 0);
+      el.value = (v / 100).toFixed(2).replace('.', ',');
+      setTimeout(() => { el.selectionStart = el.selectionEnd = el.value.length; }, 0);
     });
 
     // on blur: format nicely
-    el.addEventListener('blur', ()=>{
+    el.addEventListener('blur', () => {
       const v = Number(el.dataset.cents) || 0;
       el.value = formatBRL(v / 100);
     });
   }
 
   attachCurrencyInput(salaryInput);
-  attachCurrencyInput(salaryInputInline);
+  attachCurrencyInput(salaryInputInline);     
 
-  function attachPercentInput(el){
-    if(!el) return;
+  function attachPercentInput(el) {
+    if (!el) return;
 
     const initialDecimal = parsePercentStringToDecimal(el.value);
     // "centi-percent": 8,25% => 825
@@ -149,10 +149,10 @@
     el.value = formatPercentFromCenti(centiPercent);
 
     el.addEventListener('keydown', (ev) => {
-      const allow = ['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','Enter'];
-      if(allow.includes(ev.key) || (ev.ctrlKey || ev.metaKey)) return;
+      const allow = ['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'];
+      if (allow.includes(ev.key) || (ev.ctrlKey || ev.metaKey)) return;
 
-      if(/^[0-9]$/.test(ev.key)){
+      if (/^[0-9]$/.test(ev.key)) {
         ev.preventDefault();
         centiPercent = (centiPercent * 10) + Number(ev.key);
         el.dataset.centiPercent = String(centiPercent);
@@ -160,7 +160,7 @@
         return;
       }
 
-      if(ev.key === 'Backspace'){
+      if (ev.key === 'Backspace') {
         ev.preventDefault();
         centiPercent = Math.floor(centiPercent / 10);
         el.dataset.centiPercent = String(centiPercent);
@@ -168,7 +168,7 @@
         return;
       }
 
-      if(ev.key === 'Delete'){
+      if (ev.key === 'Delete') {
         ev.preventDefault();
         centiPercent = 0;
         el.dataset.centiPercent = '0';
@@ -188,63 +188,67 @@
       el.value = formatPercentFromCenti(centiPercent);
     });
 
-    el.addEventListener('focus', ()=>{
-      setTimeout(()=>{ el.selectionStart = el.selectionEnd = el.value.length; }, 0);
+    el.addEventListener('focus', () => {
+      setTimeout(() => { el.selectionStart = el.selectionEnd = el.value.length; }, 0);
     });
 
-    el.addEventListener('blur', ()=>{
+    el.addEventListener('blur', () => {
       const v = Number(el.dataset.centiPercent) || 0;
       el.value = formatPercentFromCenti(v);
     });
   }
 
   attachPercentInput(reservaTecnicaInput);
-  // NOTE: VT e VA agora são valores fixos no backend; não existem inputs para eles.
-
   
 
+
   async function downloadPlanilha(payload) {
-  try {
-    const resp = await fetch('http://localhost:3000/gerar-planilha', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const { hostname, protocol, port } = window.location;
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+      const API_BASE_URL = isLocal
+        ? (port === '3000' ? '' : `${protocol}//${hostname}:3000`)
+        : ''; // usar URL relativa em produção
+      const resp = await fetch(`${API_BASE_URL}/gerar-planilha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    if (!resp.ok) {
-      const txt = await resp.text().catch(()=>null);
-      throw new Error(`Erro ${resp.status}: ${txt || resp.statusText}`);
-    }
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => null);
+        throw new Error(`Erro ${resp.status}: ${txt || resp.statusText}`);
+      }
 
-    // recebe o conteúdo como blob
-    const blob = await resp.blob();
+      // recebe o conteúdo como blob
+      const blob = await resp.blob();
 
-    // tenta extrair o filename do header Content-Disposition
-    const cd = resp.headers.get('Content-Disposition') || resp.headers.get('content-disposition') || '';
-    let filename = 'planilha.xlsx';
-    const match = /filename\\*?=(?:UTF-8'')?\"?([^\";\\n]+)/i.exec(cd);
-    if (match && match[1]) {
-      filename = decodeURIComponent(match[1].replace(/['"]/g,''));
-    }
+      // tenta extrair o filename do header Content-Disposition
+      const cd = resp.headers.get('Content-Disposition') || resp.headers.get('content-disposition') || '';
+      let filename = 'planilha.xlsx';
+      const match = /filename\\*?=(?:UTF-8'')?\"?([^\";\\n]+)/i.exec(cd);
+      if (match && match[1]) {
+        filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+      }
 
-    // cria link para download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('Erro ao gerar/baixar planilha:', err);
+      // cria link para download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao gerar/baixar planilha:', err);
       alert('Erro ao gerar a planilha: ' + (err.message || err));
       throw err;
+    }
   }
-}
 
 
-  form.addEventListener('submit', async (e)=>{
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const nameEl = newName();
     const descEl = newDesc();
@@ -259,15 +263,15 @@
     const adicionalNoturno = newAdicionalNoturno();
     const hours = hoursEl ? hoursEl.value.trim() : '';
     const vigencia = vigenciaEl ? Number(vigenciaEl.value) || 12 : 12;
-    if(!name){ alert('Informe o nome do cargo'); return; }
-    if(!hours){ alert('Informe a carga horária do novo cargo'); return; }
+    if (!name) { alert('Informe o nome do cargo'); return; }
+    if (!hours) { alert('Informe a carga horária do novo cargo'); return; }
     // salary: prefer in-memory cents value (data-cents) from the masked input
     let salary;
-    if(salaryEl && typeof salaryEl.dataset.cents !== 'undefined'){
+    if (salaryEl && typeof salaryEl.dataset.cents !== 'undefined') {
       salary = Number(salaryEl.dataset.cents) / 100;
     } else {
       const salaryRaw = salaryEl ? salaryEl.value.trim() : '';
-      if(!salaryRaw){ alert('Informe o salário-base do novo cargo'); return; }
+      if (!salaryRaw) { alert('Informe o salário-base do novo cargo'); return; }
       // normaliza salário (permite vírgula)
       salary = parseBRLString(salaryRaw);
     }
@@ -309,45 +313,45 @@
       return;
     }
     // mostra resumo (opcional)
-    if(result) result.textContent = JSON.stringify(payload, null, 2);
+    if (result) result.textContent = JSON.stringify(payload, null, 2);
     // limpa formulário
-    nameEl.value = ''; if(descEl) descEl.value = ''; if(hoursEl) hoursEl.value = '';
-    if(salaryEl){ salaryEl.value = formatBRL(0); salaryEl.dataset.cents = '0'; }
-    if(reservaTecnicaEl){ reservaTecnicaEl.value = '0,00%'; reservaTecnicaEl.dataset.centiPercent = '0'; }
+    nameEl.value = ''; if (descEl) descEl.value = ''; if (hoursEl) hoursEl.value = '';
+    if (salaryEl) { salaryEl.value = formatBRL(0); salaryEl.dataset.cents = '0'; }
+    if (reservaTecnicaEl) { reservaTecnicaEl.value = '0,00%'; reservaTecnicaEl.dataset.centiPercent = '0'; }
     // VT/VA removidos: nada a resetar no front-end
   });
 
-  
+
 
   // cancelar: limpa campos do form
   const cancelBtn = document.getElementById('cancel-new-cargo');
-  if(cancelBtn){
-    cancelBtn.addEventListener('click', ()=>{
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
       const n = newName(); const d = newDesc(); const h = newHours(); const s = newSalary();
       const rt = newReservaTecnica();
       const v = newVigencia();
-      if(n) n.value = '';
-      if(d) d.value = '';
-      if(h) h.value = '';
-      if(v) v.value = '12';
-      if(s){ s.value = formatBRL(0); s.dataset.cents = '0'; }
-      if(rt){ rt.value = '0,00%'; rt.dataset.centiPercent = '0'; }
+      if (n) n.value = '';
+      if (d) d.value = '';
+      if (h) h.value = '';
+      if (v) v.value = '12';
+      if (s) { s.value = formatBRL(0); s.dataset.cents = '0'; }
+      if (rt) { rt.value = '0,00%'; rt.dataset.centiPercent = '0'; }
       // limpar radios/select
       const pSim = document.getElementById('periculosidade-sim');
       const pNao = document.getElementById('periculosidade-nao');
-      if(pSim) pSim.checked = false; if(pNao) pNao.checked = true;
+      if (pSim) pSim.checked = false; if (pNao) pNao.checked = true;
       const iSim = document.getElementById('insalubridade-sim');
       const iNao = document.getElementById('insalubridade-nao');
-      if(iSim) iSim.checked = false; if(iNao) iNao.checked = true;
+      if (iSim) iSim.checked = false; if (iNao) iNao.checked = true;
       const pct = document.getElementById('insalubridade-percent');
-      if(pct) pct.value = '20';
+      if (pct) pct.value = '20';
       const anSim = document.getElementById('adicional-noturno-sim');
       const anNao = document.getElementById('adicional-noturno-nao');
-      if(anSim) anSim.checked = false; if(anNao) anNao.checked = true;
-      const opts = document.getElementById('insalubridade-options'); if(opts) opts.style.display = 'none';
-      const optsInline = document.getElementById('insalubridade-options-inline'); if(optsInline) optsInline.style.display = 'none';
-      const sInline = document.getElementById('new-salary-inline'); if(sInline){ sInline.value = formatBRL(0); sInline.dataset.cents = '0'; }
-      
+      if (anSim) anSim.checked = false; if (anNao) anNao.checked = true;
+      const opts = document.getElementById('insalubridade-options'); if (opts) opts.style.display = 'none';
+      const optsInline = document.getElementById('insalubridade-options-inline'); if (optsInline) optsInline.style.display = 'none';
+      const sInline = document.getElementById('new-salary-inline'); if (sInline) { sInline.value = formatBRL(0); sInline.dataset.cents = '0'; }
+
     });
   }
 
@@ -355,8 +359,8 @@
   const insalSim = document.getElementById('insalubridade-sim');
   const insalNao = document.getElementById('insalubridade-nao');
   const insalOpts = document.getElementById('insalubridade-options');
-  if(insalSim){ insalSim.addEventListener('change', ()=>{ if(insalOpts) insalOpts.style.display = insalSim.checked ? 'block' : 'none'; }); }
-  if(insalNao){ insalNao.addEventListener('change', ()=>{ if(insalOpts) insalOpts.style.display = insalNao.checked ? 'none' : insalOpts.style.display; }); }
+  if (insalSim) { insalSim.addEventListener('change', () => { if (insalOpts) insalOpts.style.display = insalSim.checked ? 'block' : 'none'; }); }
+  if (insalNao) { insalNao.addEventListener('change', () => { if (insalOpts) insalOpts.style.display = insalNao.checked ? 'none' : insalOpts.style.display; }); }
 
-    
+
 })();
