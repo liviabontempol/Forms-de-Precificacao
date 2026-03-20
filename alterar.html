@@ -30,6 +30,22 @@
         cursor: pointer;
         flex: 1;
       }
+      .encargo-search {
+        margin: 12px 0;
+      }
+      .encargo-search label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+      .encargo-search input {
+        width: 100%;
+      }
+      .encargos-no-result {
+        color: var(--muted);
+        font-size: 0.95rem;
+        margin: 8px 0;
+      }
       .valores-inputs {
         display: none;
       }
@@ -67,6 +83,17 @@
 
         <div id="encargos-section" style="display:none;">
           <h3 style="margin-top: 24px;">2. Selecione os encargos a serem alterados</h3>
+          <div class="encargo-search">
+            <label for="encargo-search">Pesquisar rubrica</label>
+            <input
+              type="text"
+              id="encargo-search"
+              list="encargos-suggestions"
+              placeholder="Digite o nome da rubrica..."
+              autocomplete="off"
+            />
+            <datalist id="encargos-suggestions"></datalist>
+          </div>
           <div class="encargos-selection" id="encargos-list">
             <p style="color: var(--muted);">Carregando encargos...</p>
           </div>
@@ -84,8 +111,7 @@
         </div>
 
         <div style="margin-top: 24px; display: flex; gap: 8px;">
-          <a href="index.html"><button type="button" style="background: #6b7280;">Voltar</button></a>
-          <a href="precificar.html"><button type="button">Ir para Precificar Cargo Novo</button></a>
+          <button type="button" id="voltar-btn" style="background: #6b7280;">Voltar</button>
         </div>
       </form>
 

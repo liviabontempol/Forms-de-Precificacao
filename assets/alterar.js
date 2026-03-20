@@ -1,22 +1,60 @@
 (function() {
-  const API_BASE = 'http://localhost:3000';
+  const API_BASE = (
+    document.querySelector('meta[name="api-base"]')?.content ||
+    window.__API_BASE__ ||
+    window.localStorage.getItem('API_BASE') ||
+    'http://localhost:3000'
+  ).replace(/\/+$/, '');
   
   // Elementos do DOM
   const cargoSelect = document.getElementById('cargo-select');
   const encargosSection = document.getElementById('encargos-section');
   const encargosList = document.getElementById('encargos-list');
+  const encargoSearchInput = document.getElementById('encargo-search');
+  const encargosSuggestions = document.getElementById('encargos-suggestions');
   const valoresSection = document.getElementById('valores-section');
   const valoresInputsContainer = document.getElementById('valores-inputs-container');
   const alterarForm = document.getElementById('alterar-form');
   const limparBtn = document.getElementById('limpar-btn');
   const gerarPlanilhaBtn = document.getElementById('gerar-planilha-btn');
+  const voltarBtn = document.getElementById('voltar-btn');
   const resultSection = document.getElementById('result');
   
   // Dados carregados
   let cargos = [];
   let encargos = [];
+  let selectedEncargos = new Set();
   let cargoSelecionado = null;
   let valoresAtuais = {};
+  let carregarValoresAbortController = null;
+  let cargoChangeRequestSeq = 0;
+
+  function normalizarTexto(str) {
+    return String(str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function atualizarSugestoesEncargo() {
+    if (!encargosSuggestions) return;
+
+    const termo = normalizarTexto(encargoSearchInput?.value || '');
+    const sugestoes = encargos
+      .filter(encargo => {
+        if (!termo) return true;
+        return normalizarTexto(encargo.nome_legivel).includes(termo);
+      })
+      .slice(0, 20);
+
+    encargosSuggestions.innerHTML = '';
+    sugestoes.forEach(encargo => {
+      const option = document.createElement('option');
+      option.value = encargo.nome_legivel;
+      encargosSuggestions.appendChild(option);
+    });
+  }
   
   // Utilitários para formatação de moeda
   function parseBRLString(str) {
@@ -35,8 +73,76 @@
 
   function formatPercentual(n) {
     if (!Number.isFinite(n)) return '0';
-    // Multiplica por 100 e formata com até 4 casas decimais
-    return (n * 100).toFixed(4).replace('.', ',');
+    // Multiplica por 100 e formata com 2 casas decimais
+    return (n * 100).toFixed(2).replace('.', ',');
+  }
+
+  function formatPercentualMaskFromDigits(digits) {
+    const onlyDigits = String(digits || '').replace(/\D/g, '');
+    const padded = (onlyDigits || '0').padStart(3, '0');
+    const integerPart = String(Number(padded.slice(0, -2)));
+    const decimalPart = padded.slice(-2);
+    return `${integerPart},${decimalPart}%`;
+  }
+
+  function getPercentualMaskDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+  }
+
+  function updatePercentualMaskedInput(input, nextDigits) {
+    input.value = formatPercentualMaskFromDigits(nextDigits);
+    const cursorPos = Math.max(0, input.value.length - 1);
+    input.setSelectionRange(cursorPos, cursorPos);
+  }
+
+  function handlePercentualInputKeydown(e) {
+    const input = e.target;
+    const key = e.key;
+    const isDigit = /^[0-9]$/.test(key);
+    const isNavigationKey = ['Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key);
+
+    if (isNavigationKey) return;
+
+    if (isDigit) {
+      e.preventDefault();
+      const baseDigits = input.dataset.prefilled === 'true' ? '' : getPercentualMaskDigits(input.value);
+      input.dataset.prefilled = 'false';
+      updatePercentualMaskedInput(input, `${baseDigits}${key}`);
+      return;
+    }
+
+    if (key === 'Backspace') {
+      e.preventDefault();
+      const baseDigits = input.dataset.prefilled === 'true' ? '' : getPercentualMaskDigits(input.value).slice(0, -1);
+      input.dataset.prefilled = 'false';
+      updatePercentualMaskedInput(input, baseDigits);
+      return;
+    }
+
+    if (key === 'Delete') {
+      e.preventDefault();
+      input.dataset.prefilled = 'false';
+      updatePercentualMaskedInput(input, '');
+      return;
+    }
+
+    if (key.length === 1) {
+      e.preventDefault();
+    }
+  }
+
+  function handlePercentualInputFocus(e) {
+    const input = e.target;
+    const cursorPos = Math.max(0, input.value.length - 1);
+    input.setSelectionRange(0, cursorPos);
+  }
+
+  function handlePercentualInputPaste(e) {
+    e.preventDefault();
+    const input = e.target;
+    const textoColado = e.clipboardData?.getData('text') || '';
+    input.dataset.prefilled = 'false';
+    updatePercentualMaskedInput(input, getPercentualMaskDigits(textoColado));
   }
 
   function parsePercentualString(str) {
@@ -77,6 +183,7 @@
       if (!response.ok) throw new Error('Erro ao carregar encargos');
       
       encargos = await response.json();
+      atualizarSugestoesEncargo();
       renderizarEncargos();
     } catch (error) {
       console.error('Erro ao carregar encargos:', error);
@@ -87,8 +194,21 @@
   // Renderizar lista de encargos com checkboxes
   function renderizarEncargos() {
     encargosList.innerHTML = '';
+    const termo = normalizarTexto(encargoSearchInput?.value || '');
+    const encargosFiltrados = encargos.filter(encargo => {
+      if (!termo) return true;
+      return normalizarTexto(encargo.nome_legivel).includes(termo);
+    });
+
+    if (encargosFiltrados.length === 0) {
+      const semResultado = document.createElement('p');
+      semResultado.className = 'encargos-no-result';
+      semResultado.textContent = 'Nenhuma rubrica encontrada.';
+      encargosList.appendChild(semResultado);
+      return;
+    }
     
-    encargos.forEach(encargo => {
+    encargosFiltrados.forEach(encargo => {
       const div = document.createElement('div');
       div.className = 'encargo-item';
       
@@ -96,6 +216,7 @@
       checkbox.type = 'checkbox';
       checkbox.id = `encargo-${encargo.slug}`;
       checkbox.value = encargo.slug;
+      checkbox.checked = selectedEncargos.has(encargo.slug);
       checkbox.addEventListener('change', onEncargoChange);
       
       const label = document.createElement('label');
@@ -109,44 +230,59 @@
   }
 
   // Carregar valores atuais do cargo selecionado
-  async function carregarValoresCargo(cargoId) {
+  async function carregarValoresCargo(cargoId, signal) {
     try {
-      const response = await fetch(`${API_BASE}/valores?cargo_id=${cargoId}`);
+      const response = await fetch(`${API_BASE}/valores?cargo_id=${cargoId}`, { signal });
       if (!response.ok) throw new Error('Erro ao carregar valores');
       
       const valores = await response.json();
-      valoresAtuais = {};
+      const valoresAtuaisCargo = {};
       
       valores.forEach(valor => {
-        valoresAtuais[valor.slug] = valor.percentual;
+        valoresAtuaisCargo[valor.slug] = valor.percentual;
       });
       
-      return valoresAtuais;
+      return valoresAtuaisCargo;
     } catch (error) {
+      if (error.name === 'AbortError') return null;
       console.error('Erro ao carregar valores:', error);
       mostrarMensagem('Erro ao carregar valores do cargo', 'error');
-      return {};
+      return null;
     }
   }
 
   // Handler para mudança de cargo
   async function onCargoChange() {
     const cargoId = cargoSelect.value;
+    const requestSeq = ++cargoChangeRequestSeq;
+    
+    if (carregarValoresAbortController) {
+      carregarValoresAbortController.abort();
+    }
     
     if (!cargoId) {
       encargosSection.style.display = 'none';
       valoresSection.classList.remove('visible');
+      selectedEncargos.clear();
       cargoSelecionado = null;
+      valoresAtuais = {};
       return;
     }
     
     cargoSelecionado = cargos.find(c => c.id === parseInt(cargoId));
+    carregarValoresAbortController = new AbortController();
     
     // Carregar valores do cargo
-    await carregarValoresCargo(cargoId);
+    const valoresCargo = await carregarValoresCargo(cargoId, carregarValoresAbortController.signal);
+    if (requestSeq !== cargoChangeRequestSeq || valoresCargo == null) return;
+    valoresAtuais = valoresCargo;
     
     // Mostrar seção de encargos
     encargosSection.style.display = 'block';
+
+    selectedEncargos.clear();
+    if (encargoSearchInput) encargoSearchInput.value = '';
+    atualizarSugestoesEncargo();
     
     // Re-renderizar encargos para limpar seleções anteriores
     renderizarEncargos();
@@ -157,10 +293,25 @@
   }
 
   // Handler para mudança de seleção de encargos
-  function onEncargoChange() {
-    const encargosSelecionados = Array.from(
-      document.querySelectorAll('#encargos-list input[type="checkbox"]:checked')
+  function onEncargoChange(event) {
+    const checkboxes = Array.from(
+      document.querySelectorAll('#encargos-list input[type="checkbox"]')
     );
+
+    // Para evitar atualização parcial, permite alteração de uma rubrica por vez.
+    if (event && event.target && event.target.checked) {
+      checkboxes.forEach(cb => {
+        if (cb !== event.target) cb.checked = false;
+      });
+      selectedEncargos.clear();
+      selectedEncargos.add(event.target.value);
+    }
+
+    if (event && event.target && !event.target.checked) {
+      selectedEncargos.delete(event.target.value);
+    }
+
+    const encargosSelecionados = Array.from(selectedEncargos);
     
     if (encargosSelecionados.length === 0) {
       valoresSection.classList.remove('visible');
@@ -174,11 +325,10 @@
   }
 
   // Renderizar campos de entrada para valores
-  function renderizarCamposValor(checkboxes) {
+  function renderizarCamposValor(slugs) {
     valoresInputsContainer.innerHTML = '';
     
-    checkboxes.forEach(checkbox => {
-      const slug = checkbox.value;
+    slugs.forEach(slug => {
       const encargo = encargos.find(e => e.slug === slug);
       if (!encargo) return;
       
@@ -200,13 +350,23 @@
       input.type = 'text';
       input.id = `valor-${slug}`;
       input.name = slug;
-      input.placeholder = '0,0000';
+      input.placeholder = '0,00%';
       input.dataset.slug = slug;
       
       // Preencher com valor atual se existir
       if (valorAtual != null) {
-        input.value = formatPercentual(valorAtual);
+        input.value = `${formatPercentual(valorAtual)}%`;
+        input.dataset.prefilled = 'true';
+      } else {
+        input.value = '0,00%';
+        input.dataset.prefilled = 'false';
       }
+
+      input.inputMode = 'numeric';
+      input.autocomplete = 'off';
+      input.addEventListener('keydown', handlePercentualInputKeydown);
+      input.addEventListener('focus', handlePercentualInputFocus);
+      input.addEventListener('paste', handlePercentualInputPaste);
       
       div.appendChild(label);
       div.appendChild(input);
@@ -228,55 +388,46 @@
       mostrarMensagem('Selecione pelo menos um encargo para alterar', 'error');
       return;
     }
+
+    if (inputs.length > 1) {
+      mostrarMensagem('Altere apenas uma rubrica por vez para garantir consistência dos dados', 'warning');
+      return;
+    }
     
     alterarForm.classList.add('loading');
     
     try {
-      const promises = [];
-      
-      inputs.forEach(input => {
-        const slug = input.dataset.slug;
-        const valorStr = input.value.trim();
-        
-        if (valorStr === '') {
-          mostrarMensagem(`Valor vazio para ${slug}`, 'warning');
-          return;
-        }
-        
-        const percentual = parsePercentualString(valorStr);
-        
-        if (!Number.isFinite(percentual)) {
-          throw new Error(`Valor inválido para ${slug}: ${valorStr}`);
-        }
-        
-        // Fazer requisição PUT para cada valor
-        const promise = fetch(`${API_BASE}/valores`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cargo_id: cargoSelecionado.id,
-            slug: slug,
-            percentual: percentual
-          })
-        }).then(response => {
-          if (!response.ok) throw new Error(`Erro ao atualizar ${slug}`);
-          return response.json();
-        });
-        
-        promises.push(promise);
+      const input = inputs[0];
+      const slug = input.dataset.slug;
+      const valorStr = input.value.trim();
+
+      const percentual = parsePercentualString(valorStr);
+
+      if (!Number.isFinite(percentual)) {
+        throw new Error(`Valor inválido para ${slug}: ${valorStr}`);
+      }
+
+      const response = await fetch(`${API_BASE}/valores`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cargo_id: cargoSelecionado.id,
+          slug: slug,
+          percentual: percentual
+        })
       });
-      
-      await Promise.all(promises);
+
+      if (!response.ok) throw new Error(`Erro ao atualizar ${slug}`);
+      await response.json();
       
       mostrarMensagem('Valores atualizados com sucesso!', 'success');
       
       // Recarregar valores atuais
-      await carregarValoresCargo(cargoSelecionado.id);
+      const valoresCargo = await carregarValoresCargo(cargoSelecionado.id);
+      if (valoresCargo != null) valoresAtuais = valoresCargo;
       
       // Re-renderizar campos com novos valores
-      const encargosSelecionados = Array.from(
-        document.querySelectorAll('#encargos-list input[type="checkbox"]:checked')
-      );
+      const encargosSelecionados = Array.from(selectedEncargos);
       renderizarCamposValor(encargosSelecionados);
       
     } catch (error) {
@@ -332,8 +483,11 @@
     encargosSection.style.display = 'none';
     valoresSection.classList.remove('visible');
     valoresInputsContainer.innerHTML = '';
+    selectedEncargos.clear();
     cargoSelecionado = null;
     valoresAtuais = {};
+    if (encargoSearchInput) encargoSearchInput.value = '';
+    atualizarSugestoesEncargo();
     
     // Desmarcar todos os checkboxes
     document.querySelectorAll('#encargos-list input[type="checkbox"]').forEach(cb => {
@@ -362,9 +516,14 @@
 
   // Event listeners
   cargoSelect.addEventListener('change', onCargoChange);
+  encargoSearchInput.addEventListener('input', () => {
+    atualizarSugestoesEncargo();
+    renderizarEncargos();
+  });
   alterarForm.addEventListener('submit', submitAlteracoes);
   limparBtn.addEventListener('click', limparFormulario);
   gerarPlanilhaBtn.addEventListener('click', gerarPlanilha);
+  voltarBtn.addEventListener('click', () => { window.location.href = 'index.html'; });
 
   // Inicialização
   async function init() {
