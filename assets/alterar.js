@@ -6,7 +6,6 @@
     'http://localhost:3000'
   ).replace(/\/+$/, '');
   
-  // Elementos do DOM
   const cargoSelect = document.getElementById('cargo-select');
   const encargosSection = document.getElementById('encargos-section');
   const encargosList = document.getElementById('encargos-list');
@@ -15,12 +14,12 @@
   const valoresSection = document.getElementById('valores-section');
   const valoresInputsContainer = document.getElementById('valores-inputs-container');
   const alterarForm = document.getElementById('alterar-form');
+  const salvarAlteracoesBtn = document.getElementById('salvar-alteracoes-btn');
   const limparBtn = document.getElementById('limpar-btn');
   const gerarPlanilhaBtn = document.getElementById('gerar-planilha-btn');
   const voltarBtn = document.getElementById('voltar-btn');
   const resultSection = document.getElementById('result');
   
-  // Dados carregados
   let cargos = [];
   let encargos = [];
   let selectedEncargos = new Set();
@@ -28,6 +27,13 @@
   let valoresAtuais = {};
   let carregarValoresAbortController = null;
   let cargoChangeRequestSeq = 0;
+  const MONETARIO_SLUG_HINTS = new Set([
+    'vt',
+    'va',
+    'uniformes',
+    'materiais',
+    'equipamentosprotecaoindividual'
+  ]);
 
   function normalizarTexto(str) {
     return String(str || '')
@@ -46,7 +52,7 @@
         if (!termo) return true;
         return normalizarTexto(encargo.nome_legivel).includes(termo);
       })
-      .slice(0, 20);
+      .slice(0, 5);
 
     encargosSuggestions.innerHTML = '';
     sugestoes.forEach(encargo => {
@@ -56,7 +62,6 @@
     });
   }
   
-  // Utilitários para formatação de moeda
   function parseBRLString(str) {
     if (str == null) return NaN;
     let s = String(str).replace(/\s/g, '').replace('R$', '');
@@ -73,7 +78,6 @@
 
   function formatPercentual(n) {
     if (!Number.isFinite(n)) return '0';
-    // Multiplica por 100 e formata com 2 casas decimais
     return (n * 100).toFixed(2).replace('.', ',');
   }
 
@@ -85,14 +89,42 @@
     return `${integerPart},${decimalPart}%`;
   }
 
+  function formatMonetarioMaskFromDigits(digits) {
+    const onlyDigits = String(digits || '').replace(/\D/g, '');
+    const padded = (onlyDigits || '0').padStart(3, '0');
+    const integerPart = String(Number(padded.slice(0, -2))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const decimalPart = padded.slice(-2);
+    return `R$ ${integerPart},${decimalPart}`;
+  }
+
   function getPercentualMaskDigits(value) {
     return String(value || '').replace(/\D/g, '');
   }
 
   function updatePercentualMaskedInput(input, nextDigits) {
-    input.value = formatPercentualMaskFromDigits(nextDigits);
-    const cursorPos = Math.max(0, input.value.length - 1);
+    const isMonetario = input.dataset.tipo === 'monetario';
+    input.value = isMonetario
+      ? formatMonetarioMaskFromDigits(nextDigits)
+      : formatPercentualMaskFromDigits(nextDigits);
+    const cursorPos = isMonetario
+      ? input.value.length
+      : Math.max(0, input.value.length - 1);
     input.setSelectionRange(cursorPos, cursorPos);
+  }
+
+  function normalizarSlug(slug) {
+    return String(slug || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  function detectarTipoRubrica(slug, valorAtual) {
+    const slugNormalizado = normalizarSlug(slug);
+    if (MONETARIO_SLUG_HINTS.has(slugNormalizado)) return 'monetario';
+    if (Number.isFinite(valorAtual) && valorAtual > 1) return 'monetario';
+    return 'percentual';
+  }
+
+  function parseValorPorTipo(str, tipo) {
+    return tipo === 'monetario' ? parseBRLString(str) : parsePercentualString(str);
   }
 
   function handlePercentualInputKeydown(e) {
@@ -133,7 +165,9 @@
 
   function handlePercentualInputFocus(e) {
     const input = e.target;
-    const cursorPos = Math.max(0, input.value.length - 1);
+    const cursorPos = input.dataset.tipo === 'monetario'
+      ? input.value.length
+      : Math.max(0, input.value.length - 1);
     input.setSelectionRange(0, cursorPos);
   }
 
@@ -150,11 +184,9 @@
     let s = String(str).replace(/\s/g, '').replace('%', '');
     s = s.replace(/\./g, '').replace(',', '.');
     const n = Number(s);
-    // Retorna o valor dividido por 100 (para armazenar como decimal)
     return Number.isFinite(n) ? n / 100 : NaN;
   }
 
-  // Carregar cargos do backend
   async function carregarCargos() {
     try {
       const response = await fetch(`${API_BASE}/cargos`);
@@ -176,7 +208,6 @@
     }
   }
 
-  // Carregar encargos disponíveis
   async function carregarEncargos() {
     try {
       const response = await fetch(`${API_BASE}/rubricas`);
@@ -191,7 +222,6 @@
     }
   }
 
-  // Renderizar lista de encargos com checkboxes
   function renderizarEncargos() {
     encargosList.innerHTML = '';
     const termo = normalizarTexto(encargoSearchInput?.value || '');
@@ -229,7 +259,6 @@
     });
   }
 
-  // Carregar valores atuais do cargo selecionado
   async function carregarValoresCargo(cargoId, signal) {
     try {
       const response = await fetch(`${API_BASE}/valores?cargo_id=${cargoId}`, { signal });
@@ -251,7 +280,6 @@
     }
   }
 
-  // Handler para mudança de cargo
   async function onCargoChange() {
     const cargoId = cargoSelect.value;
     const requestSeq = ++cargoChangeRequestSeq;
@@ -272,19 +300,16 @@
     cargoSelecionado = cargos.find(c => c.id === parseInt(cargoId));
     carregarValoresAbortController = new AbortController();
     
-    // Carregar valores do cargo
     const valoresCargo = await carregarValoresCargo(cargoId, carregarValoresAbortController.signal);
     if (requestSeq !== cargoChangeRequestSeq || valoresCargo == null) return;
     valoresAtuais = valoresCargo;
     
-    // Mostrar seção de encargos
     encargosSection.style.display = 'block';
 
     selectedEncargos.clear();
     if (encargoSearchInput) encargoSearchInput.value = '';
     atualizarSugestoesEncargo();
     
-    // Re-renderizar encargos para limpar seleções anteriores
     renderizarEncargos();
     
     // Limpar campos de valor
@@ -294,39 +319,32 @@
 
   // Handler para mudança de seleção de encargos
   function onEncargoChange(event) {
-    const checkboxes = Array.from(
-      document.querySelectorAll('#encargos-list input[type="checkbox"]')
-    );
+  const checkboxes = document.querySelectorAll('#encargos-list input[type="checkbox"]');
 
-    // Para evitar atualização parcial, permite alteração de uma rubrica por vez.
-    if (event && event.target && event.target.checked) {
-      checkboxes.forEach(cb => {
-        if (cb !== event.target) cb.checked = false;
-      });
-      selectedEncargos.clear();
-      selectedEncargos.add(event.target.value);
-    }
+  // Recalcula o estado inteiro baseado no DOM
+  selectedEncargos.clear();
 
-    if (event && event.target && !event.target.checked) {
-      selectedEncargos.delete(event.target.value);
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      selectedEncargos.add(cb.value);
     }
+  });
 
-    const encargosSelecionados = Array.from(selectedEncargos);
-    
-    if (encargosSelecionados.length === 0) {
-      valoresSection.classList.remove('visible');
-      valoresInputsContainer.innerHTML = '';
-      return;
-    }
-    
-    // Renderizar campos de entrada para os encargos selecionados
-    renderizarCamposValor(encargosSelecionados);
-    valoresSection.classList.add('visible');
+  const encargosSelecionados = [...selectedEncargos];
+
+  if (encargosSelecionados.length === 0) {
+    valoresSection.classList.remove('visible');
+    valoresInputsContainer.innerHTML = '';
+    return;
   }
+
+  renderizarCamposValor(encargosSelecionados);
+  valoresSection.classList.add('visible');
+}
 
   // Renderizar campos de entrada para valores
   function renderizarCamposValor(slugs) {
-    valoresInputsContainer.innerHTML = '';
+valoresInputsContainer.innerHTML = '';
     
     slugs.forEach(slug => {
       const encargo = encargos.find(e => e.slug === slug);
@@ -340,8 +358,11 @@
       
       // Mostrar valor atual se existir
       const valorAtual = valoresAtuais[slug];
+      const tipoRubrica = detectarTipoRubrica(slug, valorAtual);
       const textoValorAtual = valorAtual != null 
-        ? ` (Atual: ${formatPercentual(valorAtual)}%)`
+        ? tipoRubrica === 'monetario'
+          ? ` (Atual: ${formatBRL(valorAtual)})`
+          : ` (Atual: ${formatPercentual(valorAtual)}%)`
         : ' (Sem valor atual)';
       
       label.textContent = `${encargo.nome_legivel}${textoValorAtual}`;
@@ -350,15 +371,18 @@
       input.type = 'text';
       input.id = `valor-${slug}`;
       input.name = slug;
-      input.placeholder = '0,00%';
+      input.placeholder = tipoRubrica === 'monetario' ? 'R$ 0,00' : '0,00%';
       input.dataset.slug = slug;
+      input.dataset.tipo = tipoRubrica;
       
       // Preencher com valor atual se existir
       if (valorAtual != null) {
-        input.value = `${formatPercentual(valorAtual)}%`;
+        input.value = tipoRubrica === 'monetario'
+          ? formatBRL(valorAtual)
+          : `${formatPercentual(valorAtual)}%`;
         input.dataset.prefilled = 'true';
       } else {
-        input.value = '0,00%';
+        input.value = tipoRubrica === 'monetario' ? 'R$ 0,00' : '0,00%';
         input.dataset.prefilled = 'false';
       }
 
@@ -376,7 +400,10 @@
 
   // Submeter alterações
   async function submitAlteracoes(e) {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
     if (!cargoSelecionado) {
       mostrarMensagem('Selecione um cargo', 'error');
@@ -399,9 +426,10 @@
     try {
       const input = inputs[0];
       const slug = input.dataset.slug;
+      const tipo = input.dataset.tipo || 'percentual';
       const valorStr = input.value.trim();
 
-      const percentual = parsePercentualString(valorStr);
+      const percentual = parseValorPorTipo(valorStr, tipo);
 
       if (!Number.isFinite(percentual)) {
         throw new Error(`Valor inválido para ${slug}: ${valorStr}`);
@@ -439,7 +467,12 @@
   }
 
   // Gerar planilha com valores atualizados
-  async function gerarPlanilha() {
+  async function gerarPlanilha(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!cargoSelecionado) {
       mostrarMensagem('Selecione um cargo', 'error');
       return;
@@ -511,7 +544,7 @@
       if (resultSection.textContent === msg) {
         resultSection.textContent = '';
       }
-    }, 5000);
+    }, 6000);
   }
 
   // Event listeners
@@ -520,7 +553,11 @@
     atualizarSugestoesEncargo();
     renderizarEncargos();
   });
-  alterarForm.addEventListener('submit', submitAlteracoes);
+  alterarForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  salvarAlteracoesBtn.addEventListener('click', submitAlteracoes);
   limparBtn.addEventListener('click', limparFormulario);
   gerarPlanilhaBtn.addEventListener('click', gerarPlanilha);
   voltarBtn.addEventListener('click', () => { window.location.href = 'index.html'; });

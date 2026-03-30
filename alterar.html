@@ -1,123 +1,136 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Alterar Precificação de Cargos</title>
-    <link rel="stylesheet" href="assets/styles.css" />
-    <style>
-      .encargos-selection {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid #e2e8f0;
-        border-radius: 4px;
-        padding: 12px;
-        margin-bottom: 16px;
-      }
-      .encargo-item {
-        display: flex;
-        align-items: center;
-        padding: 6px 0;
-        border-bottom: 1px solid #f1f5f9;
-      }
-      .encargo-item:last-child {
-        border-bottom: none;
-      }
-      .encargo-item input[type="checkbox"] {
-        margin-right: 10px;
-      }
-      .encargo-item label {
-        cursor: pointer;
-        flex: 1;
-      }
-      .encargo-search {
-        margin: 12px 0;
-      }
-      .encargo-search label {
-        display: block;
-        margin-bottom: 6px;
-        font-weight: 600;
-      }
-      .encargo-search input {
-        width: 100%;
-      }
-      .encargos-no-result {
-        color: var(--muted);
-        font-size: 0.95rem;
-        margin: 8px 0;
-      }
-      .valores-inputs {
-        display: none;
-      }
-      .valores-inputs.visible {
-        display: block;
-      }
-      .valor-field {
-        margin-bottom: 12px;
-      }
-      .valor-field label {
-        font-weight: 600;
-        display: block;
-        margin-bottom: 4px;
-      }
-      .valor-field input {
-        width: 100%;
-      }
-      .loading {
-        opacity: 0.6;
-        pointer-events: none;
-      }
-    </style>
-  </head>
-  <body>
-    <main class="container">
-      <h1>Alterar Precificação de Cargos</h1>
-      
-      <form id="alterar-form" autocomplete="off">
-        <div>
-          <label for="cargo-select">1. Selecione o cargo</label>
-          <select id="cargo-select" required>
-            <option value="">Carregando cargos...</option>
-          </select>
-        </div>
 
-        <div id="encargos-section" style="display:none;">
-          <h3 style="margin-top: 24px;">2. Selecione os encargos a serem alterados</h3>
-          <div class="encargo-search">
-            <label for="encargo-search">Pesquisar rubrica</label>
-            <input
-              type="text"
-              id="encargo-search"
-              list="encargos-suggestions"
-              placeholder="Digite o nome da rubrica..."
-              autocomplete="off"
-            />
-            <datalist id="encargos-suggestions"></datalist>
-          </div>
-          <div class="encargos-selection" id="encargos-list">
-            <p style="color: var(--muted);">Carregando encargos...</p>
-          </div>
-        </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Alterar Precificação de Cargos</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .encargos-selection {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
 
-        <div id="valores-section" class="valores-inputs">
-          <h3 style="margin-top: 24px;">3. Insira os novos valores</h3>
-          <div id="valores-inputs-container"></div>
-          
-          <div style="margin-top: 20px; display: flex; gap: 8px;">
-            <button type="submit">Salvar alterações</button>
-            <button type="button" id="gerar-planilha-btn" style="background: #10b981;">Gerar planilha</button>
-            <button type="button" id="limpar-btn" style="background: #6b7280;">Limpar</button>
-          </div>
-        </div>
+    .encargo-item {
+      display: flex;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
 
-        <div style="margin-top: 24px; display: flex; gap: 8px;">
-          <button type="button" id="voltar-btn" style="background: #6b7280;">Voltar</button>
+    .encargo-item:last-child {
+      border-bottom: none;
+    }
+
+    .encargo-item input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    .encargo-item label {
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .encargo-search {
+      margin: 12px 0;
+    }
+
+    .encargo-search label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .encargo-search input {
+      width: 100%;
+    }
+
+    .encargos-no-result {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin: 8px 0;
+    }
+
+    .valores-inputs {
+      display: none;
+    }
+
+    .valores-inputs.visible {
+      display: block;
+    }
+
+    .valor-field {
+      margin-bottom: 12px;
+    }
+
+    .valor-field label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .valor-field input {
+      width: 100%;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>Alterar Precificação de Cargos</h1>
+
+    <form id="alterar-form" autocomplete="off">
+      <div>
+        <label for="cargo-select">1. Selecione o cargo</label>
+        <select id="cargo-select" required>
+          <option value="">Carregando cargos...</option>
+        </select>
+      </div>
+
+      <div id="encargos-section" style="display:none;">
+        <h3 style="margin-top: 24px;">2. Selecione os encargos a serem alterados</h3>
+        <div class="encargo-search">
+          <label for="encargo-search">Pesquisar rubrica</label>
+          <input type="text" id="encargo-search" list="encargos-suggestions" placeholder="Digite o nome da rubrica..."
+            autocomplete="off" />
+          <datalist id="encargos-suggestions"></datalist>
         </div>
-      </form>
+        <div class="encargos-selection" id="encargos-list">
+          <p style="color: var(--muted);">Carregando encargos...</p>
+        </div>
+      </div>
+
+      <div id="valores-section" class="valores-inputs">
+        <h3 style="margin-top: 24px;">3. Insira os novos valores</h3>
+        <div id="valores-inputs-container"></div>
+
+        <div style="margin-top: 20px; display: flex; gap: 8px;">
+          <button type="button" id="salvar-alteracoes-btn">Salvar alterações</button>
+          <button type="button" id="gerar-planilha-btn" style="background: #10b981;">Gerar planilha</button>
+          <button type="button" id="limpar-btn" style="background: #6b7280;">Limpar</button>
+        </div>
+      </div>
 
       <section aria-live="polite" id="result" class="result" style="margin-top: 20px;"></section>
-    </main>
+      
+      <div style="margin-top: 24px; display: flex; gap: 8px;">
+        <button type="button" id="voltar-btn" style="background: #6b7280;">Voltar</button>
+      </div>
+    </form>
 
-    <script src="assets/alterar.js"></script>
-  </body>
+  </main>
+
+  <script src="assets/alterar.js"></script>
+</body>
+
 </html>
