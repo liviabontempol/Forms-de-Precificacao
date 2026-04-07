@@ -35,6 +35,55 @@
     'equipamentosprotecaoindividual'
   ]);
 
+  function limparElemento(elemento) {
+    if (!elemento) return;
+    elemento.replaceChildren();
+  }
+
+  function estaVisivel(elemento) {
+    return !!elemento && window.getComputedStyle(elemento).display !== 'none';
+  }
+
+  function capturarEstadoTela() {
+    return {
+      cargoId: cargoSelect.value,
+      encargosVisiveis: estaVisivel(encargosSection),
+      valoresVisiveis: valoresSection.classList.contains('visible'),
+      termoBusca: encargoSearchInput?.value || '',
+      encargosSelecionados: Array.from(selectedEncargos)
+    };
+  }
+
+  function restaurarEstadoTela(estadoTela) {
+    if (!estadoTela) return;
+
+    const perdeuEtapaEncargos = estadoTela.encargosVisiveis && !estaVisivel(encargosSection);
+    const perdeuEtapaValores = estadoTela.valoresVisiveis && !valoresSection.classList.contains('visible');
+    if (!perdeuEtapaEncargos && !perdeuEtapaValores) return;
+
+    if (estadoTela.cargoId && cargoSelect.value !== estadoTela.cargoId) {
+      cargoSelect.value = estadoTela.cargoId;
+    }
+
+    if (estadoTela.encargosVisiveis) {
+      encargosSection.style.display = 'block';
+    }
+
+    if (encargoSearchInput) {
+      encargoSearchInput.value = estadoTela.termoBusca;
+    }
+
+    selectedEncargos.clear();
+    estadoTela.encargosSelecionados.forEach(slug => selectedEncargos.add(slug));
+
+    renderizarEncargos();
+
+    if (estadoTela.valoresVisiveis && estadoTela.encargosSelecionados.length > 0) {
+      renderizarCamposValor(estadoTela.encargosSelecionados);
+      valoresSection.classList.add('visible');
+    }
+  }
+
   function normalizarTexto(str) {
     return String(str || '')
       .normalize('NFD')
@@ -54,7 +103,7 @@
       })
       .slice(0, 5);
 
-    encargosSuggestions.innerHTML = '';
+    limparElemento(encargosSuggestions);
     sugestoes.forEach(encargo => {
       const option = document.createElement('option');
       option.value = encargo.nome_legivel;
@@ -223,7 +272,7 @@
   }
 
   function renderizarEncargos() {
-    encargosList.innerHTML = '';
+    limparElemento(encargosList);
     const termo = normalizarTexto(encargoSearchInput?.value || '');
     const encargosFiltrados = encargos.filter(encargo => {
       if (!termo) return true;
@@ -313,38 +362,36 @@
     renderizarEncargos();
     
     // Limpar campos de valor
-    valoresInputsContainer.innerHTML = '';
+    limparElemento(valoresInputsContainer);
     valoresSection.classList.remove('visible');
   }
 
   // Handler para mudança de seleção de encargos
   function onEncargoChange(event) {
-  const checkboxes = document.querySelectorAll('#encargos-list input[type="checkbox"]');
+    const checkbox = event?.target;
+    if (!checkbox || checkbox.type !== 'checkbox') return;
 
-  // Recalcula o estado inteiro baseado no DOM
-  selectedEncargos.clear();
-
-  checkboxes.forEach(cb => {
-    if (cb.checked) {
-      selectedEncargos.add(cb.value);
+    if (checkbox.checked) {
+      selectedEncargos.add(checkbox.value);
+    } else {
+      selectedEncargos.delete(checkbox.value);
     }
-  });
 
-  const encargosSelecionados = [...selectedEncargos];
+    const encargosSelecionados = [...selectedEncargos];
 
-  if (encargosSelecionados.length === 0) {
-    valoresSection.classList.remove('visible');
-    valoresInputsContainer.innerHTML = '';
-    return;
+    if (encargosSelecionados.length === 0) {
+      valoresSection.classList.remove('visible');
+      limparElemento(valoresInputsContainer);
+      return;
+    }
+
+    renderizarCamposValor(encargosSelecionados);
+    valoresSection.classList.add('visible');
   }
-
-  renderizarCamposValor(encargosSelecionados);
-  valoresSection.classList.add('visible');
-}
 
   // Renderizar campos de entrada para valores
   function renderizarCamposValor(slugs) {
-valoresInputsContainer.innerHTML = '';
+    limparElemento(valoresInputsContainer);
     
     slugs.forEach(slug => {
       const encargo = encargos.find(e => e.slug === slug);
@@ -421,6 +468,7 @@ valoresInputsContainer.innerHTML = '';
       return;
     }
     
+    const estadoTelaAntesDaOperacao = capturarEstadoTela();
     alterarForm.classList.add('loading');
     
     try {
@@ -462,6 +510,7 @@ valoresInputsContainer.innerHTML = '';
       console.error('Erro ao salvar alterações:', error);
       mostrarMensagem(`Erro ao salvar: ${error.message}`, 'error');
     } finally {
+      restaurarEstadoTela(estadoTelaAntesDaOperacao);
       alterarForm.classList.remove('loading');
     }
   }
@@ -478,6 +527,8 @@ valoresInputsContainer.innerHTML = '';
       return;
     }
     
+    const estadoTelaAntesDaOperacao = capturarEstadoTela();
+
     try {
       // Fazer requisição para gerar planilha
       const response = await fetch(`${API_BASE}/gerar-planilha`, {
@@ -507,6 +558,8 @@ valoresInputsContainer.innerHTML = '';
     } catch (error) {
       console.error('Erro ao gerar planilha:', error);
       mostrarMensagem(`Erro ao gerar planilha: ${error.message}`, 'error');
+    } finally {
+      restaurarEstadoTela(estadoTelaAntesDaOperacao);
     }
   }
 
@@ -515,7 +568,7 @@ valoresInputsContainer.innerHTML = '';
     cargoSelect.value = '';
     encargosSection.style.display = 'none';
     valoresSection.classList.remove('visible');
-    valoresInputsContainer.innerHTML = '';
+    limparElemento(valoresInputsContainer);
     selectedEncargos.clear();
     cargoSelecionado = null;
     valoresAtuais = {};
@@ -548,19 +601,19 @@ valoresInputsContainer.innerHTML = '';
   }
 
   // Event listeners
-  cargoSelect.addEventListener('change', onCargoChange);
-  encargoSearchInput.addEventListener('input', () => {
+  cargoSelect?.addEventListener('change', onCargoChange);
+  encargoSearchInput?.addEventListener('input', () => {
     atualizarSugestoesEncargo();
     renderizarEncargos();
   });
-  alterarForm.addEventListener('submit', (e) => {
+  alterarForm?.addEventListener('submit', (e) => {
     e.preventDefault();
     e.stopPropagation();
   });
-  salvarAlteracoesBtn.addEventListener('click', submitAlteracoes);
-  limparBtn.addEventListener('click', limparFormulario);
-  gerarPlanilhaBtn.addEventListener('click', gerarPlanilha);
-  voltarBtn.addEventListener('click', () => { window.location.href = 'index.html'; });
+  salvarAlteracoesBtn?.addEventListener('click', submitAlteracoes);
+  limparBtn?.addEventListener('click', limparFormulario);
+  gerarPlanilhaBtn?.addEventListener('click', gerarPlanilha);
+  voltarBtn?.addEventListener('click', () => { window.location.href = 'index.html'; });
 
   // Inicialização
   async function init() {

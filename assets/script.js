@@ -2,7 +2,6 @@
   const form = document.getElementById('sample-form');
   const result = document.getElementById('result');
   const newName = () => document.getElementById('new-name');
-  const newDesc = () => document.getElementById('new-desc');
   const newHours = () => document.getElementById('new-hours');
   const newVigencia = () => document.getElementById('new-vigencia');
   const newQuantidade = () => document.getElementById('new-quantidade');
@@ -259,9 +258,9 @@
     form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const nameEl = newName();
-    const descEl = newDesc();
     const hoursEl = newHours();
     const vigenciaEl = newVigencia();
+    const quantidadeEl = newQuantidade();
     const salaryEl = newSalary();
     const reservaTecnicaEl = newReservaTecnica();
     const name = nameEl ? nameEl.value.trim() : '';
@@ -270,9 +269,11 @@
     const insalubridadePct = insalubridade ? (newInsalubridadePct() || 20) : null;
     const adicionalNoturno = newAdicionalNoturno(form);
     const hours = hoursEl ? hoursEl.value.trim() : '';
+    const quantidadeRaw = quantidadeEl ? quantidadeEl.value.trim() : '';
     const vigencia = vigenciaEl ? Number(vigenciaEl.value) || 12 : 12;
     if (!name) { alert('Informe o nome do cargo'); return; }
     if (!hours) { alert('Informe a carga horária do novo cargo'); return; }
+    if (!quantidadeRaw) { alert('Informe a quantidade de postos'); return; }
     // salary: prefer in-memory cents value (data-cents) from the masked input
     let salary;
     if (salaryEl && typeof salaryEl.dataset.cents !== 'undefined') {
@@ -298,8 +299,7 @@
     }
 
     // monta payload compatível com gerarPlanilha.js
-    const quantidadeEl = newQuantidade();
-    const quantidade = quantidadeEl ? Number(quantidadeEl.value) || 1 : 1;
+    const quantidade = Number(quantidadeRaw) || 1;
     const payload = {
       cargo: name,
       jornada: hours || '',
@@ -328,7 +328,7 @@
     // mostra resumo (opcional)
     if (result) result.textContent = JSON.stringify(payload, null, 2);
     // limpa formulário
-    nameEl.value = ''; if (descEl) descEl.value = ''; if (hoursEl) hoursEl.value = '';
+    nameEl.value = ''; if (hoursEl) hoursEl.value = ''; if (quantidadeEl) quantidadeEl.value = '1';
     if (salaryEl) { salaryEl.value = formatBRL(0); salaryEl.dataset.cents = '0'; }
     if (reservaTecnicaEl) { reservaTecnicaEl.value = '0,00%'; reservaTecnicaEl.dataset.centiPercent = '0'; }
     // VT/VA removidos: nada a resetar no front-end
@@ -341,11 +341,12 @@
   const cancelBtn = document.getElementById('cancel-new-cargo');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
-      const n = newName(); const h = newHours(); const s = newSalary();
+      const n = newName(); const h = newHours(); const q = newQuantidade(); const s = newSalary();
       const rt = newReservaTecnica();
       const v = newVigencia();
       if (n) n.value = '';
       if (h) h.value = '';
+      if (q) q.value = '1';
       if (v) v.value = '12';
       if (s) { s.value = formatBRL(0); s.dataset.cents = '0'; }
       if (rt) { rt.value = '0,00%'; rt.dataset.centiPercent = '0'; }
