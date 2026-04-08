@@ -299,7 +299,12 @@
     }
 
     // monta payload compatível com gerarPlanilha.js
-    const quantidade = Number(quantidadeRaw) || 1;
+    const quantidade = Number(quantidadeRaw);
+    if (!/^\d+$/.test(quantidadeRaw) || !Number.isInteger(quantidade) || quantidade<1){
+      alert('Informe uma quantidade valida');
+      return;
+    }
+
     const payload = {
       cargo: name,
       jornada: hours || '',
@@ -325,13 +330,31 @@
     } catch (err) {
       return;
     }
-    // mostra resumo (opcional)
-    if (result) result.textContent = JSON.stringify(payload, null, 2);
-    // limpa formulário
-    nameEl.value = ''; if (hoursEl) hoursEl.value = ''; if (quantidadeEl) quantidadeEl.value = '1';
-    if (salaryEl) { salaryEl.value = formatBRL(0); salaryEl.dataset.cents = '0'; }
-    if (reservaTecnicaEl) { reservaTecnicaEl.value = '0,00%'; reservaTecnicaEl.dataset.centiPercent = '0'; }
-    // VT/VA removidos: nada a resetar no front-end
+     // mostra resumo (opcional)
+if (result) {
+  result.textContent = JSON.stringify(payload, null, 2);
+}
+
+// limpa formulário
+nameEl.value = '';
+
+if (hoursEl) {
+  hoursEl.value = '';
+}
+
+if (quantidadeEl) {
+  quantidadeEl.value = '1';
+}
+
+if (salaryEl) {
+  salaryEl.value = formatBRL(0);
+  salaryEl.dataset.cents = '0';
+}
+
+if (reservaTecnicaEl) {
+  reservaTecnicaEl.value = '0,00%';
+  reservaTecnicaEl.dataset.centiPercent = '0';
+}
     });
   }
 
