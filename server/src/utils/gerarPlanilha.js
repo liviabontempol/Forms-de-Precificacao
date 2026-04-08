@@ -21,6 +21,27 @@ function roundTo2(value) {
     return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function calcularAdicionalNoturno(salarioBase) {
+    // Constantes (regras do calculo)
+    const horasPorDia = 6.28;
+    const diasMes = 27;
+    const adicionalPercentual = 0.2;
+    const fatorHoraReduzida = 1.1429;
+    const diasUteis = 25;
+    const dsrDias = 5;
+
+    // Calculos
+    const valorHora = salarioBase / 220;
+    const valorHoraAdicional = valorHora * adicionalPercentual;
+    const horasMes = horasPorDia * diasMes;
+    const horasNoturnas = horasMes * fatorHoraReduzida;
+    const valorAdicional = valorHoraAdicional * horasNoturnas;
+    const dsr = ((horasNoturnas / diasUteis) * dsrDias) * valorHoraAdicional;
+    const total = valorAdicional + dsr;
+
+    return Number(total.toFixed(2));
+}
+
 export async function gerarPlanilha(dados) {
     const tempDir = path.join(__dirname, "..", "temp");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -103,7 +124,9 @@ export async function gerarPlanilha(dados) {
     }
 
     let valorAdicionalNoturno = 0;
-    //if(dados.insalubridade){   FAZER O CALCULO AQUI }
+    if (dados.adicionalNoturno) {
+        valorAdicionalNoturno = calcularAdicionalNoturno(Number(dados.salarioBase || 0));
+    }
 
 
     // Periculosidade
@@ -179,7 +202,7 @@ export async function gerarPlanilha(dados) {
         totTotal21 += tot;
         letraAtual21 = String.fromCharCode(letraAtual21.charCodeAt(0) + 1);
     });
-
+    
     //total do submodulo 2.1
     const rowTotal21 = sheet.addRow(["Total", "", `${(pctTotal21 * 100).toFixed(2)}%`, valTotal21, totTotal21]);
     sheet.mergeCells(`A${rowTotal21.number}:B${rowTotal21.number}`);
@@ -561,7 +584,9 @@ export async function gerarPlanilha(dados) {
 
     // tributosValeAlimentacao
     if (dados.encargosPercentuais.tributosValeAlimentacao !== undefined) {
-        const pcttributosValeAlimentacao = Number(dados.encargosPercentuais.tributosValeAlimentacao || 0); /**FAZER LOGICA AQUI */
+        const tributosMunicipais = Number(dados.encargosPercentuais.tributosMunicipais || 0);
+        const pcttributosValeAlimentacao = tributosMunicipais >= 1
+            ? 0 : tributosMunicipais / (1 - tributosMunicipais);
         let valortributosValeAlimentacao = valorVA * pcttributosValeAlimentacao;
         valortributosValeAlimentacao = roundTo2(valortributosValeAlimentacao);
         const totaltributosValeAlimentacao = valortributosValeAlimentacao * dados.quantidade;

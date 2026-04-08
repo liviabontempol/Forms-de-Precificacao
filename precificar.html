@@ -55,6 +55,39 @@
 
       <label for="new-reserva-tecnica">Reserva Técnica (%)</label>
       <input id="new-reserva-tecnica" name="reservaTecnica" type="text" placeholder="0,00%" value="0,00%" />
+
+      <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Uniforme</legend>
+        <label><input type="radio" name="uniforme" id="uniforme-sim" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="uniforme" id="uniforme-nao" value="nao" checked> Não</label>
+
+        <div id="uniforme-options" style="margin-top:8px;display:none;">
+          <label for="new-uniformes">Valor de Uniforme (R$)</label>
+          <input id="new-uniformes" name="uniformes" type="text" placeholder="Ex.: 120,00" value="R$0,00" />
+        </div>
+      </fieldset>
+
+      <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Material</legend>
+        <label><input type="radio" name="material" id="material-sim" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="material" id="material-nao" value="nao" checked> Não</label>
+
+        <div id="material-options" style="margin-top:8px;display:none;">
+          <label for="new-materiais">Valor de Material (R$)</label>
+          <input id="new-materiais" name="materiais" type="text" placeholder="Ex.: 80,00" value="R$0,00" />
+        </div>
+      </fieldset>
+
+      <fieldset style="border:0;padding:0;margin:8px 0;">
+        <legend style="font-weight:600">Equipamentos de Proteção Individual</legend>
+        <label><input type="radio" name="epi" id="epi-sim" value="sim"> Sim</label>
+        <label style="margin-left:12px;"><input type="radio" name="epi" id="epi-nao" value="nao" checked> Não</label>
+
+        <div id="epi-options" style="margin-top:8px;display:none;">
+          <label for="new-epi">Valor de EPI (R$)</label>
+          <input id="new-epi" name="equipamentosProtecaoIndividual" type="text" placeholder="Ex.: 150,00" value="R$0,00" />
+        </div>
+      </fieldset>
       
       <label for="new-vigencia">Vigência (meses)</label>
       <select id="new-vigencia" name="vigencia">
@@ -104,8 +137,7 @@
       <label for="new-salary-inline">Salário-Base (R$)</label>
       <input id="new-salary-inline" type="text" placeholder="0,00" value="R$0,00" />
 
-      <!-- VT e VA agora são valores fixos; campos removidos do formulário inline -->
-
+     
       <div style="margin-top:10px;display:flex;gap:8px;">
         <button id="save-new-cargo" type="button">Salvar cargo</button>
         <button id="cancel-new-cargo" type="button" style="background:#e53e3e">Cancelar</button>

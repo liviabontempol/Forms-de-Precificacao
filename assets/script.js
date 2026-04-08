@@ -310,10 +310,8 @@
       jornada: hours || '',
       quantidade: quantidade,
       salarioBase: salary,
-      // defaults razoáveis; podem ser alterados no backend ou adicionados inputs no futuro
       reservaTecnica: reservaTecnica,
       salarioMinimo: salary,
-      // VT e VA são fixos no backend; não são enviados pelo front-end
       beneficios: { assistencia: 0, outros: 0 },
       adicionalNoturno: adicionalNoturno,
       horaIntervaloNoturno: 0,
