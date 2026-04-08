@@ -1,8 +1,8 @@
 (function() {
   const API_BASE = (
     document.querySelector('meta[name="api-base"]')?.content ||
-    window.__API_BASE__ ||
-    window.localStorage.getItem('API_BASE') ||
+    globalThis.__API_BASE__ ||
+    globalThis.localStorage.getItem('API_BASE') ||
     'http://localhost:3000'
   ).replace(/\/+$/, '');
   
@@ -41,7 +41,7 @@
   }
 
   function estaVisivel(elemento) {
-    return !!elemento && window.getComputedStyle(elemento).display !== 'none';
+    return !!elemento && globalThis.getComputedStyle(elemento).display !== 'none';
   }
 
   function capturarEstadoTela() {
@@ -87,7 +87,7 @@
   function normalizarTexto(str) {
     return String(str || '')
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replaceAll(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
   }
@@ -131,7 +131,7 @@
   }
 
   function formatPercentualMaskFromDigits(digits) {
-    const onlyDigits = String(digits || '').replace(/\D/g, '');
+    const onlyDigits = String(digits || '').replaceAll(/\D/g, '');
     const padded = (onlyDigits || '0').padStart(3, '0');
     const integerPart = String(Number(padded.slice(0, -2)));
     const decimalPart = padded.slice(-2);
@@ -139,15 +139,15 @@
   }
 
   function formatMonetarioMaskFromDigits(digits) {
-    const onlyDigits = String(digits || '').replace(/\D/g, '');
+    const onlyDigits = String(digits || '').replaceAll(/\D/g, '');
     const padded = (onlyDigits || '0').padStart(3, '0');
-    const integerPart = String(Number(padded.slice(0, -2))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const integerPart = String(Number(padded.slice(0, -2))).replaceAll(/\B(?=(\d{3})+(?!\d))/g, '.');
     const decimalPart = padded.slice(-2);
     return `R$ ${integerPart},${decimalPart}`;
   }
 
   function getPercentualMaskDigits(value) {
-    return String(value || '').replace(/\D/g, '');
+    return String(value || '').replaceAll(/\D/g, '');
   }
 
   function updatePercentualMaskedInput(input, nextDigits) {
@@ -162,7 +162,7 @@
   }
 
   function normalizarSlug(slug) {
-    return String(slug || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return String(slug || '').toLowerCase().replaceAll(/[^a-z0-9]/g, '');
   }
 
   function detectarTipoRubrica(slug, valorAtual) {
@@ -179,7 +179,8 @@
   function handlePercentualInputKeydown(e) {
     const input = e.target;
     const key = e.key;
-    const isDigit = /^[0-9]$/.test(key);
+     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const isDigit = /^\d$/.test(key);
     const isNavigationKey = ['Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key);
 
     if (isNavigationKey) return;
@@ -406,11 +407,15 @@
       // Mostrar valor atual se existir
       const valorAtual = valoresAtuais[slug];
       const tipoRubrica = detectarTipoRubrica(slug, valorAtual);
-      const textoValorAtual = valorAtual != null 
-        ? tipoRubrica === 'monetario'
-          ? ` (Atual: ${formatBRL(valorAtual)})`
-          : ` (Atual: ${formatPercentual(valorAtual)}%)`
-        : ' (Sem valor atual)';
+      let textoValorAtual;
+
+if (valorAtual == null) {
+  textoValorAtual = ' (Sem valor atual)';
+} else if (tipoRubrica === 'monetario') {
+  textoValorAtual = ` (Atual: ${formatBRL(valorAtual)})`;
+} else {
+  textoValorAtual = ` (Atual: ${formatPercentual(valorAtual)}%)`;
+}
       
       label.textContent = `${encargo.nome_legivel}${textoValorAtual}`;
       
@@ -613,7 +618,7 @@
   salvarAlteracoesBtn?.addEventListener('click', submitAlteracoes);
   limparBtn?.addEventListener('click', limparFormulario);
   gerarPlanilhaBtn?.addEventListener('click', gerarPlanilha);
-  voltarBtn?.addEventListener('click', () => { window.location.href = 'index.html'; });
+  voltarBtn?.addEventListener('click', () => { globalThis.location.href = 'index.html'; });
 
   // Inicialização
   async function init() {
