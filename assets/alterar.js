@@ -11,6 +11,7 @@
   const encargosList = document.getElementById('encargos-list');
   const encargoSearchInput = document.getElementById('encargo-search');
   const encargosSuggestions = document.getElementById('encargos-suggestions');
+  const encargosSummary = document.getElementById('encargos-summary');
   const valoresSection = document.getElementById('valores-section');
   const valoresInputsContainer = document.getElementById('valores-inputs-container');
   const alterarForm = document.getElementById('alterar-form');
@@ -27,6 +28,7 @@
   let valoresAtuais = {};
   let carregarValoresAbortController = null;
   let cargoChangeRequestSeq = 0;
+  let submitInFlight = false;
   const MONETARIO_SLUG_HINTS = new Set([
     'vt',
     'va',
@@ -110,6 +112,17 @@
       encargosSuggestions.appendChild(option);
     });
   }
+
+  function atualizarResumoEncargos(totalVisivel = encargos.length) {
+    if (!encargosSummary) return;
+
+    if (!cargoSelecionado) {
+      encargosSummary.textContent = 'Selecione um cargo';
+      return;
+    }
+
+    encargosSummary.textContent = `${selectedEncargos.size} selecionada(s) de ${totalVisivel}`;
+  }
   
   function parseBRLString(str) {
     if (str == null) return NaN;
@@ -174,6 +187,19 @@
 
   function parseValorPorTipo(str, tipo) {
     return tipo === 'monetario' ? parseBRLString(str) : parsePercentualString(str);
+  }
+
+  function valoresSaoIguais(valorNovo, valorAtual, tipo) {
+    const novo = Number.isFinite(valorNovo) ? valorNovo : 0;
+    const atual = Number.isFinite(valorAtual) ? valorAtual : 0;
+
+    if (tipo === 'monetario') {
+      // Compara por centavos para evitar ruído de ponto flutuante.
+      return Math.round(novo * 100) === Math.round(atual * 100);
+    }
+
+    // Percentual com precisão de 2 casas na interface (base 10.000 em decimal).
+    return Math.round(novo * 10000) === Math.round(atual * 10000);
   }
 
   function handlePercentualInputKeydown(e) {
@@ -280,6 +306,8 @@
       return normalizarTexto(encargo.nome_legivel).includes(termo);
     });
 
+    atualizarResumoEncargos(encargosFiltrados.length);
+
     if (encargosFiltrados.length === 0) {
       const semResultado = document.createElement('p');
       semResultado.className = 'encargos-no-result';
@@ -291,6 +319,9 @@
     encargosFiltrados.forEach(encargo => {
       const div = document.createElement('div');
       div.className = 'encargo-item';
+      if (selectedEncargos.has(encargo.slug)) {
+        div.classList.add('is-selected');
+      }
       
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
@@ -344,6 +375,7 @@
       selectedEncargos.clear();
       cargoSelecionado = null;
       valoresAtuais = {};
+      atualizarResumoEncargos(0);
       return;
     }
     
@@ -365,20 +397,25 @@
     // Limpar campos de valor
     limparElemento(valoresInputsContainer);
     valoresSection.classList.remove('visible');
+    atualizarResumoEncargos(encargos.length);
   }
 
   // Handler para mudança de seleção de encargos
   function onEncargoChange(event) {
     const checkbox = event?.target;
     if (!checkbox || checkbox.type !== 'checkbox') return;
+    const card = checkbox.closest('.encargo-item');
 
     if (checkbox.checked) {
       selectedEncargos.add(checkbox.value);
+      if (card) card.classList.add('is-selected');
     } else {
       selectedEncargos.delete(checkbox.value);
+      if (card) card.classList.remove('is-selected');
     }
 
     const encargosSelecionados = [...selectedEncargos];
+    atualizarResumoEncargos(encargosList?.querySelectorAll('.encargo-item').length || encargos.length);
 
     if (encargosSelecionados.length === 0) {
       valoresSection.classList.remove('visible');
@@ -461,47 +498,75 @@ if (valorAtual == null) {
       mostrarMensagem('Selecione um cargo', 'error');
       return;
     }
+
+    if (submitInFlight) {
+      mostrarMensagem('Salvamento em andamento. Aguarde a conclusão para evitar conflito.', 'warning');
+      return;
+    }
     
     const inputs = valoresInputsContainer.querySelectorAll('input[type="text"]');
     if (inputs.length === 0) {
       mostrarMensagem('Selecione pelo menos um encargo para alterar', 'error');
       return;
     }
-
-    if (inputs.length > 1) {
-      mostrarMensagem('Altere apenas uma rubrica por vez para garantir consistência dos dados', 'warning');
-      return;
-    }
     
     const estadoTelaAntesDaOperacao = capturarEstadoTela();
+    submitInFlight = true;
     alterarForm.classList.add('loading');
+    if (salvarAlteracoesBtn) salvarAlteracoesBtn.disabled = true;
     
     try {
-      const input = inputs[0];
-      const slug = input.dataset.slug;
-      const tipo = input.dataset.tipo || 'percentual';
-      const valorStr = input.value.trim();
+      const rubricasDigitadas = Array.from(inputs).map(input => {
+        const slug = input.dataset.slug;
+        const tipo = input.dataset.tipo || 'percentual';
+        const valorStr = input.value.trim();
+        const percentual = parseValorPorTipo(valorStr, tipo);
 
-      const percentual = parseValorPorTipo(valorStr, tipo);
+        if (!Number.isFinite(percentual)) {
+          throw new Error(`Valor inválido para ${slug}: ${valorStr}`);
+        }
 
-      if (!Number.isFinite(percentual)) {
-        throw new Error(`Valor inválido para ${slug}: ${valorStr}`);
+        return { slug, percentual, tipo };
+      });
+
+      const rubricasAlteradas = rubricasDigitadas
+        .filter(({ slug, percentual, tipo }) => {
+          const valorAtualBruto = valoresAtuais[slug];
+          const valorAtualNumerico = Number.isFinite(Number(valorAtualBruto))
+            ? Number(valorAtualBruto)
+            : 0;
+
+          return !valoresSaoIguais(percentual, valorAtualNumerico, tipo);
+        })
+        .map(({ slug, percentual }) => ({ slug, percentual }));
+
+      if (rubricasAlteradas.length === 0) {
+        mostrarMensagem('Nenhuma alteração de valor detectada. Ajuste ao menos um campo antes de salvar.', 'warning');
+        return;
       }
 
-      const response = await fetch(`${API_BASE}/valores`, {
+      const response = await fetch(`${API_BASE}/valores/lote`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cargo_id: cargoSelecionado.id,
-          slug: slug,
-          percentual: percentual
+          rubricas: rubricasAlteradas
         })
       });
 
-      if (!response.ok) throw new Error(`Erro ao atualizar ${slug}`);
-      await response.json();
-      
-      mostrarMensagem('Valores atualizados com sucesso!', 'success');
+      const payloadResposta = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const mensagemErro = payloadResposta?.error || 'Falha ao salvar todas as rubricas.';
+        throw new Error(mensagemErro);
+      }
+
+      const totalAtualizadas = Number(payloadResposta?.atualizadas || 0);
+      if (totalAtualizadas !== rubricasAlteradas.length) {
+        throw new Error('A confirmação do servidor não contempla todas as rubricas enviadas.');
+      }
+
+      mostrarMensagem(`${rubricasAlteradas.length} rubrica(s) salva(s) com sucesso!`, 'success');
       
       // Recarregar valores atuais
       const valoresCargo = await carregarValoresCargo(cargoSelecionado.id);
@@ -514,9 +579,12 @@ if (valorAtual == null) {
     } catch (error) {
       console.error('Erro ao salvar alterações:', error);
       mostrarMensagem(`Erro ao salvar: ${error.message}`, 'error');
-    } finally {
       restaurarEstadoTela(estadoTelaAntesDaOperacao);
+    
+    } finally {
       alterarForm.classList.remove('loading');
+      submitInFlight = false;
+      if (salvarAlteracoesBtn) salvarAlteracoesBtn.disabled = false;
     }
   }
 
@@ -577,6 +645,7 @@ if (valorAtual == null) {
     selectedEncargos.clear();
     cargoSelecionado = null;
     valoresAtuais = {};
+    atualizarResumoEncargos(0);
     if (encargoSearchInput) encargoSearchInput.value = '';
     atualizarSugestoesEncargo();
     
@@ -611,11 +680,11 @@ if (valorAtual == null) {
     atualizarSugestoesEncargo();
     renderizarEncargos();
   });
-  alterarForm?.addEventListener('submit', (e) => {
+  salvarAlteracoesBtn?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    submitAlteracoes(e);
   });
-  salvarAlteracoesBtn?.addEventListener('click', submitAlteracoes);
   limparBtn?.addEventListener('click', limparFormulario);
   gerarPlanilhaBtn?.addEventListener('click', gerarPlanilha);
   voltarBtn?.addEventListener('click', () => { globalThis.location.href = 'index.html'; });
@@ -624,6 +693,7 @@ if (valorAtual == null) {
   async function init() {
     await carregarCargos();
     await carregarEncargos();
+    atualizarResumoEncargos(encargos.length);
   }
 
   init();

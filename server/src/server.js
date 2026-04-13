@@ -25,6 +25,15 @@ function dbAll(sql, params = []) {
   });
 }
 
+function dbRun(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
+  });
+}
+
 async function obterDadosDoBD(cargoId) {
   const cargo = await dbGet('SELECT * FROM cargos WHERE id = ?', [cargoId]);
   if (!cargo) return null;
@@ -89,6 +98,61 @@ app.put('/valores', (req, res) => {
       res.json(row);
     });
   });
+});
+
+app.put('/valores/lote', async (req, res) => {
+  const { cargo_id, rubricas } = req.body || {};
+
+  if (!cargo_id || !Array.isArray(rubricas) || rubricas.length === 0) {
+    return res.status(400).json({ error: 'cargo_id e rubricas são obrigatórios' });
+  }
+
+  const rubricasNormalizadas = [];
+  for (const item of rubricas) {
+    if (!item || !item.slug) {
+      return res.status(400).json({ error: 'Cada rubrica deve conter slug' });
+    }
+
+    const pct = (item.percentual == null) ? null : Number(String(item.percentual).replace(',', '.'));
+    if (pct !== null && Number.isNaN(pct)) {
+      return res.status(400).json({ error: `percentual inválido para ${item.slug}` });
+    }
+
+    rubricasNormalizadas.push({ slug: item.slug, percentual: pct });
+  }
+
+  const sqlUpsert = 'INSERT INTO valores (cargo_id, slug, percentual) VALUES (?, ?, ?) ON CONFLICT (cargo_id,slug) DO UPDATE SET percentual = excluded.percentual';
+
+  try {
+    await dbRun('BEGIN IMMEDIATE TRANSACTION');
+
+    for (const rubrica of rubricasNormalizadas) {
+      await dbRun(sqlUpsert, [cargo_id, rubrica.slug, rubrica.percentual]);
+    }
+
+    await dbRun('COMMIT');
+
+    const placeholders = rubricasNormalizadas.map(() => '?').join(',');
+    const params = [cargo_id, ...rubricasNormalizadas.map(r => r.slug)];
+    const rows = await dbAll(
+      `SELECT * FROM valores WHERE cargo_id = ? AND slug IN (${placeholders})`,
+      params
+    );
+
+    res.json({
+      cargo_id,
+      atualizadas: rows.length,
+      rubricas: rows
+    });
+  } catch (error) {
+    try {
+      await dbRun('ROLLBACK');
+    } catch {
+      // sem ação: rollback pode falhar se a transação já foi encerrada
+    }
+    console.error('Erro ao atualizar rubricas em lote:', error);
+    res.status(500).json({ error: 'Falha ao salvar todas as rubricas. Nenhuma alteração foi aplicada.' });
+  }
 });
 
 
