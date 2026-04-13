@@ -146,7 +146,7 @@ export async function gerarPlanilha(dados) {
     }
     // Adicional Noturno (opcional)
     if (dados.adicionalNoturno) {
-        sheet.addRow(["D", `Adicional Noturno`, "", valorAdicionalNoturno, null]);
+        sheet.addRow(["D", `Adicional Noturno + DSR`, "", valorAdicionalNoturno, null]);
     } else {
         sheet.addRow(["D", `Adicional Noturno - (não aplicado)`, "", 0, 0]);
     }
@@ -202,7 +202,7 @@ export async function gerarPlanilha(dados) {
         totTotal21 += tot;
         letraAtual21 = String.fromCharCode(letraAtual21.charCodeAt(0) + 1);
     });
-    
+
     //total do submodulo 2.1
     const rowTotal21 = sheet.addRow(["Total", "", `${(pctTotal21 * 100).toFixed(2)}%`, valTotal21, totTotal21]);
     sheet.mergeCells(`A${rowTotal21.number}:B${rowTotal21.number}`);
@@ -273,11 +273,13 @@ export async function gerarPlanilha(dados) {
     let totTotal23 = 0;
 
     // vt
+    let valorVT = 0;
+    let totalVT = 0;
     if (dados.encargosPercentuais.vt !== undefined) {
         const valorPassagem = Number(dados.encargosPercentuais.vt || 0);
         const descontoLegal = 0.06 * dados.salarioBase;
-        const valorVT = (3 * valorPassagem * 26) - descontoLegal;
-        const totalVT = valorVT * dados.quantidade;
+        valorVT = (3 * valorPassagem * 26) - descontoLegal;
+        totalVT = valorVT * dados.quantidade;
         sheet.addRow(["A", `Transporte (3 x R$${valorPassagem} x 26 dias x - 6% sal)`, dados.quantidade, valorVT, totalVT]);
         valTotal23 += valorVT;
         totTotal23 += totalVT;
@@ -285,7 +287,6 @@ export async function gerarPlanilha(dados) {
         sheet.addRow(["A", "Transporte - nao encontrado", dados.quantidade, null, null]);
     }
     // va
-
     const valorDiarioVA = Number(dados.encargosPercentuais.va || 0);
     const valorVA = (valorDiarioVA * 26) * 0.8;
     const totalVA = valorVA * dados.quantidade;
@@ -512,11 +513,12 @@ export async function gerarPlanilha(dados) {
 
     let valTotal6 = 0;
     let totTotal6 = 0;
+    let valorCustosIndiretos = 0;
 
     // custos indiretos A
     if (dados.encargosPercentuais.custosIndiretos !== undefined) {
         const pctCustosIndiretos = Number(dados.encargosPercentuais.custosIndiretos || 0);
-        let valorCustosIndiretos = somModulos1a5 * pctCustosIndiretos;
+        valorCustosIndiretos = somModulos1a5 * pctCustosIndiretos;
         valorCustosIndiretos = roundTo2(valorCustosIndiretos);
         const totalCustosIndiretos = valorCustosIndiretos * dados.quantidade;
         sheet.addRow(["A", "Custos Indiretos", `${(pctCustosIndiretos * 100).toFixed(2)}%`, valorCustosIndiretos, totalCustosIndiretos]);
@@ -541,7 +543,8 @@ export async function gerarPlanilha(dados) {
     const pctTributos = somaTributos >= 1
         ? 0
         : Math.round((((somaTributos) / (1 - somaTributos)) + Number.EPSILON) * 10000) / 10000;
-    let valorTributos = 0;
+    const valTributosSoma = (salarioFinal + valorVT + valTotal21 + valTotal22 + valTotal3 + valTotal4 + valTotal5 + valorCustosIndiretos);
+    let valorTributos = pctTributos > 0 ? (valTributosSoma * pctTributos) : 0;
     valorTributos = roundTo2(valorTributos);
     const totalTributos = valorTributos * dados.quantidade;
     sheet.addRow(["C", "Tributos", `${(pctTributos * 100).toFixed(2)}%`, valorTributos, totalTributos]);

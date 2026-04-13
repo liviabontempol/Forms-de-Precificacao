@@ -7,6 +7,9 @@
   const newQuantidade = () => document.getElementById('new-quantidade');
   const newSalary = () => document.getElementById('new-salary');
   const newReservaTecnica = () => document.getElementById('new-reserva-tecnica');
+  const newUniformes = () => document.getElementById('new-uniformes');
+  const newMateriais = () => document.getElementById('new-materiais');
+  const newEpi = () => document.getElementById('new-epi');
   function getCheckedRadioValue(name, scope) {
     const root = scope && typeof scope.querySelector === 'function' ? scope : document;
     const scoped = root.querySelector(`input[name="${name}"]:checked`);
@@ -27,6 +30,15 @@
   };
   const newAdicionalNoturno = (scope) => {
     return getCheckedRadioValue('adicional-noturno', scope) === 'sim';
+  };
+  const newUniforme = (scope) => {
+    return getCheckedRadioValue('uniforme', scope) === 'sim';
+  };
+  const newMaterial = (scope) => {
+    return getCheckedRadioValue('material', scope) === 'sim';
+  };
+  const newEpiAtivo = (scope) => {
+    return getCheckedRadioValue('epi', scope) === 'sim';
   };
 
   // Helper: parse and format BRL currency strings
@@ -66,6 +78,9 @@
   const salaryInput = document.getElementById('new-salary');
   const salaryInputInline = document.getElementById('new-salary-inline');
   const reservaTecnicaInput = document.getElementById('new-reserva-tecnica');
+  const uniformesInput = document.getElementById('new-uniformes');
+  const materiaisInput = document.getElementById('new-materiais');
+  const epiInput = document.getElementById('new-epi');
 
   function attachCurrencyInput(el) {
     if (!el) return;
@@ -141,7 +156,10 @@
   }
 
   attachCurrencyInput(salaryInput);
-  attachCurrencyInput(salaryInputInline);     
+  attachCurrencyInput(salaryInputInline);
+  attachCurrencyInput(uniformesInput);
+  attachCurrencyInput(materiaisInput);
+  attachCurrencyInput(epiInput);
 
   function attachPercentInput(el) {
     if (!el) return;
@@ -268,9 +286,15 @@
     const insalubridade = newInsalubridade(form);
     const insalubridadePct = insalubridade ? (newInsalubridadePct() || 20) : null;
     const adicionalNoturno = newAdicionalNoturno(form);
+    const uniformeAtivo = newUniforme(form);
+    const materialAtivo = newMaterial(form);
+    const epiAtivo = newEpiAtivo(form);
     const hours = hoursEl ? hoursEl.value.trim() : '';
     const quantidadeRaw = quantidadeEl ? quantidadeEl.value.trim() : '';
     const vigencia = vigenciaEl ? Number(vigenciaEl.value) || 12 : 12;
+    const uniformesEl = newUniformes();
+    const materiaisEl = newMateriais();
+    const epiEl = newEpi();
     if (!name) { alert('Informe o nome do cargo'); return; }
     if (!hours) { alert('Informe a carga horária do novo cargo'); return; }
     if (!quantidadeRaw) { alert('Informe a quantidade de postos'); return; }
@@ -298,6 +322,24 @@
       reservaTecnica = Number.isFinite(parsedReserva) ? parsedReserva : 0;
     }
 
+    const uniformes = (uniformeAtivo && uniformesEl)
+      ? ((typeof uniformesEl.dataset.cents !== 'undefined')
+        ? (Number(uniformesEl.dataset.cents) || 0) / 100
+        : (parseBRLString(uniformesEl.value) || 0))
+      : 0;
+
+    const materiais = (materialAtivo && materiaisEl)
+      ? ((typeof materiaisEl.dataset.cents !== 'undefined')
+        ? (Number(materiaisEl.dataset.cents) || 0) / 100
+        : (parseBRLString(materiaisEl.value) || 0))
+      : 0;
+
+    const equipamentosProtecaoIndividual = (epiAtivo && epiEl)
+      ? ((typeof epiEl.dataset.cents !== 'undefined')
+        ? (Number(epiEl.dataset.cents) || 0) / 100
+        : (parseBRLString(epiEl.value) || 0))
+      : 0;
+
     // monta payload compatível com gerarPlanilha.js
     const quantidade = Number(quantidadeRaw);
     if (!/^\d+$/.test(quantidadeRaw) || !Number.isInteger(quantidade) || quantidade<1){
@@ -319,7 +361,12 @@
       vigencia: vigencia,
       periculosidade: periculosidade,
       insalubridade: insalubridade ? String(insalubridadePct || 20) : false,
-      tributos: { iss: 0, pisCofins: 0, irpjCsll: 0 }
+      tributos: { iss: 0, pisCofins: 0, irpjCsll: 0 },
+      encargosPercentuais: {
+        ...(uniformeAtivo ? { uniformes } : {}),
+        ...(materialAtivo ? { materiais } : {}),
+        ...(epiAtivo ? { equipamentosProtecaoIndividual } : {})
+      }
     };
 
     // gerar e baixar a planilha; se falhar, aborta sem salvar localmente
@@ -353,6 +400,46 @@ if (reservaTecnicaEl) {
   reservaTecnicaEl.value = '0,00%';
   reservaTecnicaEl.dataset.centiPercent = '0';
 }
+
+const uniformesResetEl = newUniformes();
+if (uniformesResetEl) {
+  uniformesResetEl.value = formatBRL(0);
+  uniformesResetEl.dataset.cents = '0';
+}
+
+const materiaisResetEl = newMateriais();
+if (materiaisResetEl) {
+  materiaisResetEl.value = formatBRL(0);
+  materiaisResetEl.dataset.cents = '0';
+}
+
+const epiResetEl = newEpi();
+if (epiResetEl) {
+  epiResetEl.value = formatBRL(0);
+  epiResetEl.dataset.cents = '0';
+}
+
+const uniformeSim = document.getElementById('uniforme-sim');
+const uniformeNao = document.getElementById('uniforme-nao');
+if (uniformeSim) uniformeSim.checked = false;
+if (uniformeNao) uniformeNao.checked = true;
+
+const materialSim = document.getElementById('material-sim');
+const materialNao = document.getElementById('material-nao');
+if (materialSim) materialSim.checked = false;
+if (materialNao) materialNao.checked = true;
+
+const epiSim = document.getElementById('epi-sim');
+const epiNao = document.getElementById('epi-nao');
+if (epiSim) epiSim.checked = false;
+if (epiNao) epiNao.checked = true;
+
+const uniformeOpts = document.getElementById('uniforme-options');
+if (uniformeOpts) uniformeOpts.style.display = 'none';
+const materialOpts = document.getElementById('material-options');
+if (materialOpts) materialOpts.style.display = 'none';
+const epiOpts = document.getElementById('epi-options');
+if (epiOpts) epiOpts.style.display = 'none';
     });
   }
 
@@ -387,6 +474,24 @@ if (reservaTecnicaEl) {
       const optsInline = document.getElementById('insalubridade-options-inline'); if (optsInline) optsInline.style.display = 'none';
       const sInline = document.getElementById('new-salary-inline'); if (sInline) { sInline.value = formatBRL(0); sInline.dataset.cents = '0'; }
 
+      const u = newUniformes(); if (u) { u.value = formatBRL(0); u.dataset.cents = '0'; }
+      const m = newMateriais(); if (m) { m.value = formatBRL(0); m.dataset.cents = '0'; }
+      const epi = newEpi(); if (epi) { epi.value = formatBRL(0); epi.dataset.cents = '0'; }
+
+      const uSim = document.getElementById('uniforme-sim');
+      const uNao = document.getElementById('uniforme-nao');
+      if (uSim) uSim.checked = false; if (uNao) uNao.checked = true;
+      const mSim = document.getElementById('material-sim');
+      const mNao = document.getElementById('material-nao');
+      if (mSim) mSim.checked = false; if (mNao) mNao.checked = true;
+      const epiSim = document.getElementById('epi-sim');
+      const epiNao = document.getElementById('epi-nao');
+      if (epiSim) epiSim.checked = false; if (epiNao) epiNao.checked = true;
+
+      const uOpts = document.getElementById('uniforme-options'); if (uOpts) uOpts.style.display = 'none';
+      const mOpts = document.getElementById('material-options'); if (mOpts) mOpts.style.display = 'none';
+      const epiOpts = document.getElementById('epi-options'); if (epiOpts) epiOpts.style.display = 'none';
+
     });
   }
 
@@ -396,6 +501,24 @@ if (reservaTecnicaEl) {
   const insalOpts = document.getElementById('insalubridade-options');
   if (insalSim) { insalSim.addEventListener('change', () => { if (insalOpts) insalOpts.style.display = insalSim.checked ? 'block' : 'none'; }); }
   if (insalNao) { insalNao.addEventListener('change', () => { if (insalOpts) insalOpts.style.display = insalNao.checked ? 'none' : insalOpts.style.display; }); }
+
+  const uniformeSim = document.getElementById('uniforme-sim');
+  const uniformeNao = document.getElementById('uniforme-nao');
+  const uniformeOpts = document.getElementById('uniforme-options');
+  if (uniformeSim) { uniformeSim.addEventListener('change', () => { if (uniformeOpts) uniformeOpts.style.display = uniformeSim.checked ? 'block' : 'none'; }); }
+  if (uniformeNao) { uniformeNao.addEventListener('change', () => { if (uniformeOpts) uniformeOpts.style.display = uniformeNao.checked ? 'none' : uniformeOpts.style.display; }); }
+
+  const materialSim = document.getElementById('material-sim');
+  const materialNao = document.getElementById('material-nao');
+  const materialOpts = document.getElementById('material-options');
+  if (materialSim) { materialSim.addEventListener('change', () => { if (materialOpts) materialOpts.style.display = materialSim.checked ? 'block' : 'none'; }); }
+  if (materialNao) { materialNao.addEventListener('change', () => { if (materialOpts) materialOpts.style.display = materialNao.checked ? 'none' : materialOpts.style.display; }); }
+
+  const epiSim = document.getElementById('epi-sim');
+  const epiNao = document.getElementById('epi-nao');
+  const epiOpts = document.getElementById('epi-options');
+  if (epiSim) { epiSim.addEventListener('change', () => { if (epiOpts) epiOpts.style.display = epiSim.checked ? 'block' : 'none'; }); }
+  if (epiNao) { epiNao.addEventListener('change', () => { if (epiOpts) epiOpts.style.display = epiNao.checked ? 'none' : epiOpts.style.display; }); }
 
 
 })();

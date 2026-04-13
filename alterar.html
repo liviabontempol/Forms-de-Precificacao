@@ -7,53 +7,147 @@
   <title>Alterar Precificação de Cargos</title>
   <link rel="stylesheet" href="assets/styles.css" />
   <style>
+    #encargos-section {
+      margin-top: 20px;
+      padding: 18px;
+      border: 1px solid #e5edf7;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fbfdff 0%, #f7faff 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    #encargos-section h3 {
+      margin: 0;
+      color: #12233f;
+      font-size: 1.06rem;
+      letter-spacing: 0.01em;
+    }
+
+    .encargos-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .encargos-summary {
+      margin: 0;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e9f2ff;
+      color: #204677;
+      font-size: 0.86rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
     .encargos-selection {
-      max-height: 300px;
+      max-height: 340px;
       overflow-y: auto;
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      padding: 12px;
+      border: 1px solid #dce8f7;
+      border-radius: 12px;
+      padding: 10px;
       margin-bottom: 16px;
+      background: #ffffff;
+    }
+
+    .encargos-selection::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .encargos-selection::-webkit-scrollbar-thumb {
+      background: #c7d8ef;
+      border-radius: 10px;
+      border: 2px solid #fff;
     }
 
     .encargo-item {
       display: flex;
       align-items: center;
-      padding: 6px 0;
-      border-bottom: 1px solid #f1f5f9;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: #fff;
+      transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+      margin-bottom: 8px;
     }
 
     .encargo-item:last-child {
-      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .encargo-item:hover {
+      background: #f7fbff;
+      border-color: #d5e5fb;
+    }
+
+    .encargo-item.is-selected {
+      background: #f0f7ff;
+      border-color: #9ec5f8;
+      box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.08);
     }
 
     .encargo-item input[type="checkbox"] {
-      margin-right: 10px;
+      margin: 0;
+      width: 18px;
+      height: 18px;
+      accent-color: #0366d6;
+      flex: 0 0 auto;
     }
 
     .encargo-item label {
       cursor: pointer;
       flex: 1;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+      color: #142540;
+      font-weight: 600;
+    }
+
+    .encargo-item .encargo-meta {
+      margin-top: 3px;
+      font-size: 0.78rem;
+      color: #667e9c;
+      font-weight: 500;
     }
 
     .encargo-search {
-      margin: 12px 0;
+      margin: 0;
+      flex: 1;
+      min-width: 220px;
     }
 
     .encargo-search label {
       display: block;
       margin-bottom: 6px;
       font-weight: 600;
+      color: #233a5f;
     }
 
     .encargo-search input {
       width: 100%;
+      margin: 0;
+      border: 1px solid #cfe0f5;
+      background: #fff;
+    }
+
+    .encargo-search input:focus {
+      border-color: #8bb8f5;
+      box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.12);
+      outline: none;
     }
 
     .encargos-no-result {
       color: var(--muted);
       font-size: 0.95rem;
-      margin: 8px 0;
+      margin: 14px 6px;
+      text-align: center;
     }
 
     .valores-inputs {
@@ -82,6 +176,16 @@
       opacity: 0.6;
       pointer-events: none;
     }
+
+    @media (max-width: 640px) {
+      .encargos-toolbar {
+        align-items: stretch;
+      }
+
+      .encargos-summary {
+        order: 2;
+      }
+    }
   </style>
 </head>
 
@@ -98,12 +202,15 @@
       </div>
 
       <div id="encargos-section" style="display:none;">
-        <h3 style="margin-top: 24px;">2. Selecione os encargos a serem alterados</h3>
-        <div class="encargo-search">
-          <label for="encargo-search">Pesquisar rubrica</label>
-          <input type="text" id="encargo-search" list="encargos-suggestions" placeholder="Digite o nome da rubrica..."
-            autocomplete="off" />
-          <datalist id="encargos-suggestions"></datalist>
+        <h3>2. Selecione os encargos a serem alterados</h3>
+        <div class="encargos-toolbar">
+          <div class="encargo-search">
+            <label for="encargo-search">Pesquisar rubrica</label>
+            <input type="text" id="encargo-search" list="encargos-suggestions" placeholder="Digite o nome da rubrica..."
+              autocomplete="off" />
+            <datalist id="encargos-suggestions"></datalist>
+          </div>
+          <p id="encargos-summary" class="encargos-summary">0 selecionadas</p>
         </div>
         <div class="encargos-selection" id="encargos-list">
           <p style="color: var(--muted);">Carregando encargos...</p>
@@ -111,12 +218,11 @@
       </div>
 
       <div id="valores-section" class="valores-inputs">
-        <h3 style="margin-top: 24px;">3. Insira os novos valores</h3>
+        <h3 style="margin-top: 24px;">3. Insira o(s) novo(s) valor(es)</h3>
         <div id="valores-inputs-container"></div>
 
         <div style="margin-top: 20px; display: flex; gap: 8px;">
-          <button type="button" id="salvar-alteracoes-btn">Salvar alterações</button>
-          <button type="button" id="gerar-planilha-btn" style="background: #10b981;">Gerar planilha</button>
+          <button type="submit" id="salvar-alteracoes-btn">Salvar alterações</button> <button type="button" id="gerar-planilha-btn" style="background: #10b981;">Gerar planilha</button>
           <button type="button" id="limpar-btn" style="background: #6b7280;">Limpar</button>
         </div>
       </div>
