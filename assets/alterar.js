@@ -680,12 +680,11 @@ if (valorAtual == null) {
     atualizarSugestoesEncargo();
     renderizarEncargos();
   });
-  alterarForm?.addEventListener('submit', (e) => {
+  salvarAlteracoesBtn?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-     submitAlteracoes(e);
+    submitAlteracoes(e);
   });
-  salvarAlteracoesBtn?.addEventListener('click', submitAlteracoes);
   limparBtn?.addEventListener('click', limparFormulario);
   gerarPlanilhaBtn?.addEventListener('click', gerarPlanilha);
   voltarBtn?.addEventListener('click', () => { globalThis.location.href = 'index.html'; });
