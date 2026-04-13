@@ -189,6 +189,19 @@
     return tipo === 'monetario' ? parseBRLString(str) : parsePercentualString(str);
   }
 
+  function valoresSaoIguais(valorNovo, valorAtual, tipo) {
+    const novo = Number.isFinite(valorNovo) ? valorNovo : 0;
+    const atual = Number.isFinite(valorAtual) ? valorAtual : 0;
+
+    if (tipo === 'monetario') {
+      // Compara por centavos para evitar ruído de ponto flutuante.
+      return Math.round(novo * 100) === Math.round(atual * 100);
+    }
+
+    // Percentual com precisão de 2 casas na interface (base 10.000 em decimal).
+    return Math.round(novo * 10000) === Math.round(atual * 10000);
+  }
+
   function handlePercentualInputKeydown(e) {
     const input = e.target;
     const key = e.key;
@@ -503,7 +516,7 @@ if (valorAtual == null) {
     if (salvarAlteracoesBtn) salvarAlteracoesBtn.disabled = true;
     
     try {
-      const rubricas = Array.from(inputs).map(input => {
+      const rubricasDigitadas = Array.from(inputs).map(input => {
         const slug = input.dataset.slug;
         const tipo = input.dataset.tipo || 'percentual';
         const valorStr = input.value.trim();
@@ -513,15 +526,31 @@ if (valorAtual == null) {
           throw new Error(`Valor inválido para ${slug}: ${valorStr}`);
         }
 
-        return { slug, percentual };
+        return { slug, percentual, tipo };
       });
+
+      const rubricasAlteradas = rubricasDigitadas
+        .filter(({ slug, percentual, tipo }) => {
+          const valorAtualBruto = valoresAtuais[slug];
+          const valorAtualNumerico = Number.isFinite(Number(valorAtualBruto))
+            ? Number(valorAtualBruto)
+            : 0;
+
+          return !valoresSaoIguais(percentual, valorAtualNumerico, tipo);
+        })
+        .map(({ slug, percentual }) => ({ slug, percentual }));
+
+      if (rubricasAlteradas.length === 0) {
+        mostrarMensagem('Nenhuma alteração de valor detectada. Ajuste ao menos um campo antes de salvar.', 'warning');
+        return;
+      }
 
       const response = await fetch(`${API_BASE}/valores/lote`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cargo_id: cargoSelecionado.id,
-          rubricas
+          rubricas: rubricasAlteradas
         })
       });
 
@@ -533,11 +562,11 @@ if (valorAtual == null) {
       }
 
       const totalAtualizadas = Number(payloadResposta?.atualizadas || 0);
-      if (totalAtualizadas !== rubricas.length) {
+      if (totalAtualizadas !== rubricasAlteradas.length) {
         throw new Error('A confirmação do servidor não contempla todas as rubricas enviadas.');
       }
 
-      mostrarMensagem(`${rubricas.length} rubrica(s) salva(s) com sucesso!`, 'success');
+      mostrarMensagem(`${rubricasAlteradas.length} rubrica(s) salva(s) com sucesso!`, 'success');
       
       // Recarregar valores atuais
       const valoresCargo = await carregarValoresCargo(cargoSelecionado.id);
